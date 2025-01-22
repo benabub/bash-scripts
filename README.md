@@ -5,7 +5,7 @@ custom commands for UNIX-like shells
 
 1. clone this repo on your machine
 
-2. add folder with scripts to $PATH variable permanently
+2. add the folder with scripts to $PATH variable permanently
 
 3. give permissions to scripts
 
@@ -23,7 +23,7 @@ For example, my location is:
 ~/bin/cli-scripts
 ```
 
-### Add folder with scripts to $PATH variable permanently
+### Add the folder with scripts to $PATH variable permanently
 
 If you use bash, you need to change `~/.bashrc`
 
