@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# restore trashed objects
+
+trash-restore

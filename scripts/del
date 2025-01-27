@@ -1,6 +1,6 @@
 #!/bin/bash
 
-count=1
+# move to trash
 
-rm -rf $*
-ls -lah
+trash $*
+ls -lah --color=tty

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# remove permanently
+
+rm -rf $*
+ls -lah
