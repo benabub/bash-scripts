@@ -3,4 +3,7 @@
 # restore trashed objects
 
 trash-restore
-ls -lah --color=tty
+
+echo "----------------------------------------------------"
+ls -A --color=tty
+echo "----------------------------------------------------"
