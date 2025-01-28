@@ -3,4 +3,4 @@
 # remove permanently
 
 rm -rf $*
-ls -lah
+ls -lah --color=tty
