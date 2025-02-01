@@ -15,53 +15,17 @@ IFS=$'\n'
 
 DIRS=($DIRS_ALL) # make array of all subdirs related paths
 
-for i in ${DIRS[*]}
+for i in "${DIRS[@]}"
 do
-    echo "${i}"
-    echo "---"
+	rename -d ' s/([a-z])([A-Z])/$1-$2/g; s/ /-/g; s/_/-/g; y/A-Z/a-z/ ' "${i}"
 done
 
 set +f
 unset IFS
 
 #######################
-# Scratches
-#######################
 
-# find . -depth -wholename "./*" -type d | rename 's/ /_/g;y/A-Z/a-z/'
+# second task: rename all regular files in a tree
 
-# find . -execdir -name "* *" -type d | rename 's/ /_/g;y/A-Z/a-z/'
-# find . -name "* *" -type f | rename 's/ /_/g;y/A-Z/a-z/'
-
-#######################
-
-check_empty_folder()
-{
-	for i in *; do
-		echo $i
-	done
-}
-
-# check_empty_folder $1
-
-#######################
-
-func()
-{
-for i in *; do
-	if [ -d "${i}" ]; then
-		for j in "${i}"/*; do 
-			if [ -d "${j}" ]; then
-				cd "${i}"
-				func
-			fi
-		done
-		rename 's/ /_/g;y/A-Z/a-z/' "${i}"
-	fi
-done
-}
-
-# func
-
-#######################
+find . -type f | rename ' s/([a-z])([A-Z])/$1-$2/g; s/ /-/g; s/_/-/g; y/A-Z/a-z/ '
 
