@@ -5,27 +5,16 @@
 
 #######################
 
-# first task: rename all subdirs in right order (from depth to cwd)
+# rename all subdirs in right order (from depth to cwd)
 # either it will cause "dir not exist" errors
 
-DIRS_ALL="$(find . -depth -wholename "./*" -type d | xargs -d \n)"
+find . -depth -wholename "./*" -type d ! -name '.*' ! -name '~*' -print0 |
+	xargs -0 -I {} echo {} |
+	rename -d ' s/([a-z])([A-Z])/$1-$2/g; s/ /-/g; s/_/-/g; y/A-Z/a-z/ '
 
-set -f
-IFS=$'\n'
+# rename all regular files in a tree
 
-DIRS=($DIRS_ALL) # make array of all subdirs related paths
-
-for i in "${DIRS[@]}"
-do
-	rename -d ' s/([a-z])([A-Z])/$1-$2/g; s/ /-/g; s/_/-/g; y/A-Z/a-z/ ' "${i}"
-done
-
-set +f
-unset IFS
-
-#######################
-
-# second task: rename all regular files in a tree
-
-find . -type f | rename ' s/([a-z])([A-Z])/$1-$2/g; s/ /-/g; s/_/-/g; y/A-Z/a-z/ '
+find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o -type f ! -iname ".*" ! -iname "~*" -print0 |
+	xargs -0 -I {} echo {} |
+	rename -d ' s/([a-z])([A-Z])/$1-$2/g; s/ /-/g; s/_/-/g; y/A-Z/a-z/ '
 
