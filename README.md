@@ -1,4 +1,4 @@
-# cli-scripts
+# bash-scripts
 custom commands for UNIX-like shells
 
 ### How to make it work:
