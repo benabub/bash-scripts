@@ -14,13 +14,13 @@ custom commands for UNIX-like shells
 Open in shell the folder you want to put this repo in and do:
 
 ```bash
-git clone https://github.com/benabub/cli-scripts.git
+git clone https://github.com/benabub/bash-scripts.git
 ```
 
 For example, my location is:
 
 ```bash
-~/bin/cli-scripts
+~/bin/bash-scripts
 ```
 
 ### Add the folder with scripts to $PATH variable permanently
@@ -38,13 +38,13 @@ export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 .. and add to it your path to repo's `scripts` folder:
 
 ```bash
-export PATH=${YOUR_PARENT_DIR}/cli-scripts/scripts:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+export PATH=${YOUR_PARENT_DIR}/bash-scripts/scripts:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 ```
 
 For example, my line is:
 
 ```bash
-export PATH=$HOME/bin/cli-scripts/scripts:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+export PATH=$HOME/bin/bash-scripts/scripts:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 ```
 
 ### Give permissions to scripts
@@ -56,5 +56,5 @@ chmod 755 {PATH_TO_REPOS_SCRIPTS_FOLDER}/*
 For example, my command was:
 
 ```bash
-chmod 755 ~/bin/cli-scripts/scripts/*
+chmod 755 ~/bin/bash-scripts/scripts/*
 ```
