@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# rename all tree (regular files & directories): lowercase + whitespaces -> '-'
+# rename dir-tree (regular files & directories): lowercase + whitespaces -> '-'
 # ignoring files and dirs, which begin with `.` | `~`
+# as options: exclude || add dirs to rename
 
 #######################
 # vars & functions
@@ -30,7 +31,7 @@ check_no_more_opts()
 check_arg_presented()
 {
 	if [ -z "$1" ]; then
-		echo "Option -e (--exclude) requires one or more arguments" 1>&2
+		echo "The command in this mode requires one or more arguments"
 		exit 1
 	fi
 }
@@ -39,12 +40,11 @@ check_subdir()
 {
 	for d in "$@"; do
 		if [ ! -d "$(pwd)/$d" ]; then
-			echo "Arguments should be subdirectories of CWD" 1>&2
+			echo "Arguments should be subdirectories of CWD"
 			exit 1
 		fi
 	done
 }
-
 
 # rename pattern (Perl)
 RP=" s/([a-z])([A-Z])/$1-$2/g;\
@@ -67,43 +67,18 @@ rename_tree()
 }
 
 #######################
-# start of program
+# parsing the command
 #######################
-
-# while getopts ":e-:" opt; do
-# 	case ${opt} in
-# 	e | - -exclude)
-# 		option=1
-# 		echo "exlude"
-# 		;;
-# 	--only|-o)
-# 		option=2
-# 		echo "only"
-# 		;;
-# 	--help|-h)
-# 		option=3
-# 		echo "help"
-# 		;;
-# 	--*|-*)
-# 		echo "Unknown option: $1"
-# 		;;
-# 	esac
-# done
-#
-# shift $((OPTIND -1))
 
 case "$1" in
 --exclude | -e )
 	option=1
-	echo "exclude"
 	;;
 --only | -o )
 	option=2
-	echo "only"
 	;;
 --help | -h )
 	option=3
-	echo "help"
 	;;
 --* | -* )
 	echo "Unknown option: $1"
@@ -117,49 +92,31 @@ esac
 
 if [ $option -eq 0 ]; then
 
-	echo "1 - $1"
-	echo "2 - $2"
-	echo "3 - $3"
-
 	check_no_args "$@"
-
 	read -rp "Are You shure to rename the whole directory tree under '$(pwd)' (y/n?): " answer
 	
 	if [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
 		echo "go"
+		# TODO: action
 	else
 		echo "------------------------- cancelled -------------------------"
 		exit 1
 	fi
-
-	# TODO: action
-	
 fi
 
 if [ $option -eq 1 ]; then
 
-	shift 1
-	
-	echo "1 - $1"
-	echo "2 - $2"
-	echo "3 - $3"
-
+	shift # either "--option" will be $1
 	check_no_more_opts "$@"
 	check_arg_presented "$@"
 	check_subdir "$@"
 
 	# TODO: action
-	
 fi
 
 if [ $option -eq 2 ]; then
 
-	shift 1
-
-	echo "1 - $1"
-	echo "2 - $2"
-	echo "3 - $3"
-
+	shift # either "--option" will be $1
 	check_no_more_opts "$@"
 	check_arg_presented "$@"
 	check_subdir "$@"
@@ -169,12 +126,7 @@ fi
 
 if [ $option -eq 3 ]; then
 
-	shift 1
-
-	echo "1 - $1"
-	echo "2 - $2"
-	echo "3 - $3"
-
+	shift # either "--option" will be $1
 	check_no_args "$@"
 	
 	# TODO: action
