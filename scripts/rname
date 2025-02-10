@@ -2,14 +2,49 @@
 
 # rename all tree (regular files & directories): lowercase + whitespaces -> '-'
 # ignoring files and dirs, which begin with `.` | `~`
-# no options and arg
 
 #######################
 # vars & functions
 #######################
 
-# var for -e option
-exclude=0
+option=0
+
+check_no_args()
+{
+	if [ -n "$1" ]; then
+		echo "The command in this mode requires no argument"
+		exit 1
+	fi
+}
+
+check_no_more_opts()
+{
+	for i in "$@"; do
+		if [[ "$i" = -* ]]; then
+			echo "The command can take only one option"
+			exit 1
+		fi
+	done
+}
+
+check_arg_presented()
+{
+	if [ -z "$1" ]; then
+		echo "Option -e (--exclude) requires one or more arguments" 1>&2
+		exit 1
+	fi
+}
+
+check_subdir()
+{
+	for d in "$@"; do
+		if [ ! -d "$(pwd)/$d" ]; then
+			echo "Arguments should be subdirectories of CWD" 1>&2
+			exit 1
+		fi
+	done
+}
+
 
 # rename pattern (Perl)
 RP=" s/([a-z])([A-Z])/$1-$2/g;\
@@ -35,45 +70,59 @@ rename_tree()
 # start of program
 #######################
 
-while getopts ":e" opt; do
-	case ${opt} in
-	e )
-		exclude=1
-		;;
-	\? )
-		echo "Invalid option: -$OPTARG" 1>&2
-		;;
-	esac
-done
+# while getopts ":e-:" opt; do
+# 	case ${opt} in
+# 	e | - -exclude)
+# 		option=1
+# 		echo "exlude"
+# 		;;
+# 	--only|-o)
+# 		option=2
+# 		echo "only"
+# 		;;
+# 	--help|-h)
+# 		option=3
+# 		echo "help"
+# 		;;
+# 	--*|-*)
+# 		echo "Unknown option: $1"
+# 		;;
+# 	esac
+# done
+#
+# shift $((OPTIND -1))
 
-shift $((OPTIND -1))
+case "$1" in
+--exclude | -e )
+	option=1
+	echo "exclude"
+	;;
+--only | -o )
+	option=2
+	echo "only"
+	;;
+--help | -h )
+	option=3
+	echo "help"
+	;;
+--* | -* )
+	echo "Unknown option: $1"
+	exit 1
+	;;
+esac
 
 #######################
 # logic
 #######################
 
-if [ $exclude -eq 1 ]; then
+if [ $option -eq 0 ]; then
 
-	if [ -z "$1" ]; then
-		echo "Option -e requires one or more arguments" 1>&2
-		exit 1
-	fi
+	echo "1 - $1"
+	echo "2 - $2"
+	echo "3 - $3"
 
-	for d in "$@"; do
-		if [ ! -d "$(pwd)/$d" ]; then
-			echo "Arguments should be subdirectories of CWD" 1>&2
-			exit 1
-		fi
-		
-	# TODO: action
-	
-	done
+	check_no_args "$@"
 
-else
-	if [ -n "$1" ]; then
-		echo "Command without options requires no argument" 1>&2
-		exit 1
-	fi
 	read -rp "Are You shure to rename the whole directory tree under '$(pwd)' (y/n?): " answer
 	
 	if [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
@@ -87,8 +136,49 @@ else
 	
 fi
 
+if [ $option -eq 1 ]; then
 
+	shift 1
+	
+	echo "1 - $1"
+	echo "2 - $2"
+	echo "3 - $3"
 
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
+
+	# TODO: action
+	
+fi
+
+if [ $option -eq 2 ]; then
+
+	shift 1
+
+	echo "1 - $1"
+	echo "2 - $2"
+	echo "3 - $3"
+
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
+	
+	# TODO: action
+fi
+
+if [ $option -eq 3 ]; then
+
+	shift 1
+
+	echo "1 - $1"
+	echo "2 - $2"
+	echo "3 - $3"
+
+	check_no_args "$@"
+	
+	# TODO: action
+fi
 
 
 
