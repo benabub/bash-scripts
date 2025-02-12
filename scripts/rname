@@ -10,16 +10,14 @@
 
 option=0
 
-check_no_args()
-{
+check_no_args() {
 	if [ -n "$1" ]; then
 		echo "The command in this mode requires no argument"
 		exit 1
 	fi
 }
 
-check_no_more_opts()
-{
+check_no_more_opts() {
 	for i in "$@"; do
 		if [[ "$i" = -* ]]; then
 			echo "The command can take only one option"
@@ -28,19 +26,17 @@ check_no_more_opts()
 	done
 }
 
-check_arg_presented()
-{
+check_arg_presented() {
 	if [ -z "$1" ]; then
 		echo "The command in this mode requires one or more arguments"
 		exit 1
 	fi
 }
 
-check_subdir()
-{
+check_subdir() {
 	for d in "$@"; do
 		if [ ! -d "$(pwd)/$d" ]; then
-			echo "Arguments should be subdirectories of CWD"
+			echo "An arguments should be subdirectories of current working directory"
 			exit 1
 		fi
 	done
@@ -48,21 +44,20 @@ check_subdir()
 
 # rename pattern (Perl)
 RP=" s/([a-z])([A-Z])/$1-$2/g;\
-	s/ /-/g; s/_/-/g;\
+	s/ /-/g;\
 	y/A-Z/a-z/ "
 
-rename_tree()
-{
+rename_tree() {
 	# rename all subdirs in right order (from depth to cwd)
 	# either it will cause "dir not exist" errors
 
-	find . -depth -wholename "./*" -type d ! -name '.*' ! -name '~*' -print0 |
+	find . -depth -type d -wholename "./*" ! -name '.*' ! -name '~*' -print0 |
 		xargs -0 -I {} echo {} | rename -d "$RP"
 
 	# rename all regular files in a tree
 
-	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune\
-		-o -type f \( ! -iname ".*" -a ! -iname "~*" \) -print0 |
+	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
+		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -a -name "[*A-Z*]" \) -print0 |
 		xargs -0 -I {} echo {} | rename -d "$RP"
 }
 
@@ -71,16 +66,43 @@ rename_tree()
 #######################
 
 case "$1" in
---exclude | -e )
+--exclude | -e)
 	option=1
 	;;
---only | -o )
+--only | -o)
 	option=2
 	;;
---help | -h )
+--files | -f)
 	option=3
 	;;
---* | -* )
+--excludefiles | -ef | -fe)
+	option=31
+	;;
+--onlyfiles | -of | -fo)
+	option=32
+	;;
+--dirs | -d)
+	option=4
+	;;
+--excludedirs | -ed | -de)
+	option=41
+	;;
+--onlydirs | -od | -do)
+	option=42
+	;;
+--both | -b)
+	option=5
+	;;
+--excludeboth | -eb | -be)
+	option=51
+	;;
+--onlyboth | -ob | -bo)
+	option=52
+	;;
+--help | -h)
+	option=6
+	;;
+--* | -*)
 	echo "Unknown option: $1"
 	exit 1
 	;;
@@ -90,20 +112,24 @@ esac
 # logic
 #######################
 
+# no args
 if [ $option -eq 0 ]; then
 
+	check_no_more_opts "$@"
 	check_no_args "$@"
 	read -rp "Are You shure to rename the whole directory tree under '$(pwd)' (y/n?): " answer
-	
+
 	if [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
 		echo "go"
 		# TODO: action
+		rename_tree
 	else
 		echo "------------------------- cancelled -------------------------"
 		exit 1
 	fi
 fi
 
+# exclude
 if [ $option -eq 1 ]; then
 
 	shift # either "--option" will be $1
@@ -114,36 +140,118 @@ if [ $option -eq 1 ]; then
 	# TODO: action
 fi
 
+# only
 if [ $option -eq 2 ]; then
 
 	shift # either "--option" will be $1
 	check_no_more_opts "$@"
 	check_arg_presented "$@"
 	check_subdir "$@"
-	
+
 	# TODO: action
 fi
 
+# files
 if [ $option -eq 3 ]; then
 
 	shift # either "--option" will be $1
+	check_no_more_opts "$@"
 	check_no_args "$@"
-	
+
 	# TODO: action
 fi
 
+# exclude + files
+if [ $option -eq 31 ]; then
 
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
 
+	# TODO: action
+fi
 
+# exclude + only
+if [ $option -eq 32 ]; then
 
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
 
+	# TODO: action
+fi
 
+# dirs
+if [ $option -eq 4 ]; then
 
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_no_args "$@"
 
+	# TODO: action
+fi
 
+# exclude + dirs
+if [ $option -eq 41 ]; then
 
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
 
+	# TODO: action
+fi
 
+# only + dirs
+if [ $option -eq 42 ]; then
 
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
 
+	# TODO: action
+fi
 
+# both
+if [ $option -eq 5 ]; then
+
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_no_args "$@"
+
+	# TODO: action
+fi
+
+# exclude + both
+if [ $option -eq 51 ]; then
+
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
+
+	# TODO: action
+fi
+
+# only + both
+if [ $option -eq 52 ]; then
+
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_arg_presented "$@"
+	check_subdir "$@"
+
+	# TODO: action
+fi
+
+if [ $option -eq 6 ]; then
+
+	shift # either "--option" will be $1
+	check_no_more_opts "$@"
+	check_no_args "$@"
+
+	# TODO: action
+fi
