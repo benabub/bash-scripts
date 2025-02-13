@@ -42,6 +42,19 @@ check_subdir() {
 	done
 }
 
+# takes 2 args: object path, object name
+check_extension() {
+	local path="$1"
+	local name="$2"
+	local regex='^.+\.[a-zA-Z0-9\-\/]+$'
+
+	if [ -f "$path" ] && [[ "$name" =~ $regex ]]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
 # rename pattern (Perl)
 RP=" s/([a-z])([A-Z])/$1-$2/g;\
 	s/ /-/g;\
@@ -57,7 +70,7 @@ rename_tree() {
 	# rename all regular files in a tree
 
 	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
-		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -a -name "[*A-Z*]" \) -print0 |
+		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "[*A-Z*]" \) -print0 |
 		xargs -0 -I {} echo {} | rename -d "$RP"
 }
 
@@ -122,7 +135,8 @@ if [ $option -eq 0 ]; then
 	if [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
 		echo "go"
 		# TODO: action
-		rename_tree
+
+		exit 0
 	else
 		echo "------------------------- cancelled -------------------------"
 		exit 1
@@ -138,6 +152,8 @@ if [ $option -eq 1 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # only
@@ -149,6 +165,8 @@ if [ $option -eq 2 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # files
@@ -159,6 +177,8 @@ if [ $option -eq 3 ]; then
 	check_no_args "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # exclude + files
@@ -170,6 +190,8 @@ if [ $option -eq 31 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # exclude + only
@@ -181,6 +203,8 @@ if [ $option -eq 32 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # dirs
@@ -191,6 +215,8 @@ if [ $option -eq 4 ]; then
 	check_no_args "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # exclude + dirs
@@ -202,6 +228,8 @@ if [ $option -eq 41 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # only + dirs
@@ -213,6 +241,8 @@ if [ $option -eq 42 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # both
@@ -223,6 +253,8 @@ if [ $option -eq 5 ]; then
 	check_no_args "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # exclude + both
@@ -234,6 +266,8 @@ if [ $option -eq 51 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 # only + both
@@ -245,6 +279,8 @@ if [ $option -eq 52 ]; then
 	check_subdir "$@"
 
 	# TODO: action
+
+	exit 0
 fi
 
 if [ $option -eq 6 ]; then
