@@ -48,7 +48,7 @@ check_extension() {
 	local name="$2"
 	local regex='^.+\.[a-zA-Z0-9\-\/]+$'
 
-	if [ -f "$path" ] && [[ "$name" =~ $regex ]]; then
+	if [ -e "$path" ] && [[ "$name" =~ $regex ]]; then
 		return 0
 	else
 		return 1
@@ -68,23 +68,99 @@ rename_str() {
 	echo "$name"
 }
 
-# rename pattern (Perl)
-RP=" s/([a-z])([A-Z])/$1-$2/g;\
-	s/ /-/g;\
-	y/A-Z/a-z/ "
+# Overwriting builtin rename command with a better variant
+# Function to rename a file with checking if new name already exists, else renaiming with index
+rename() {
+	# getting stream from pipeline and working with each line
+	while IFS= read -r path; do
+		local prefix="${path%/*}"
+		local name_old="${path##*/}"
+
+		# echo "--------------"
+		# echo "file_path - $path"
+
+		if check_extension "$path" "$name_old"; then
+			local base_name="${name_old%.*}"
+			local extension="${name_old##*.}"
+
+			# echo "prefix - $prefix"
+			# echo "name_old - $name_old"
+			# echo "base_name- $base_name"
+			# echo "extension - $extension"
+
+			base_name_new="$(rename_str "$base_name")"
+			path_new="$prefix/$base_name_new.$extension"
+
+			# echo "base_name_new - $base_name_new"
+			# echo "path_new - $path_new"
+
+			# Check if the new name already exists
+			if [ -e "$path_new" ]; then
+				# If exists, start appending index to find a unique name
+				local index=1
+				while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
+					((index++))
+				done
+				# Rename with the new unique name
+
+				# echo "result - $prefix/${base_name_new}-${index}.${extension}"
+
+				mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+			else
+				# If does not exist, rename directly
+
+				# echo "result - $prefix/${base_name_new}.${extension}"
+
+				mv "$path" "$prefix/${base_name_new}.${extension}"
+			fi
+
+		else
+			# echo "prefix - $prefix"
+			# echo "name_old - $name_old"
+
+			name_new="$(rename_str "$name_old")"
+			path_new="$prefix/$name_new"
+
+			# echo "name_new - $name_new"
+			# echo "path_new - $path_new"
+
+			# Check if the new name already exists
+			if [ -e "$path_new" ]; then
+				# If exists, start appending index to find a unique name
+				local index=1
+				while [ -e "$prefix/${name_new}-${index}" ]; do
+					((index++))
+				done
+				# Rename with the new unique name
+				
+				# echo "result - $prefix/${name_new}-${index}"
+
+				mv "$path" "$prefix/${name_new}-${index}"
+			else
+				# If does not exist, rename directly
+
+				# echo "result - $prefix/${name_new}"
+
+				mv "$path" "$prefix/${name_new}"
+			fi
+		fi
+
+	done
+
+}
 
 rename_tree() {
 	# rename all subdirs in right order (from depth to cwd)
 	# either it will cause "dir not exist" errors
 
-	find . -depth -type d -wholename "./*" ! -name '.*' ! -name '~*' -print0 |
-		xargs -0 -I {} echo {} | rename -d "$RP"
+	find . -depth -type d -wholename "./*" \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "[*A-Z*]" \) -print0 |
+		xargs -0 -I {} echo {} | rename
 
 	# rename all regular files in a tree
 
 	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
 		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "[*A-Z*]" \) -print0 |
-		xargs -0 -I {} echo {} | rename -d "$RP"
+		xargs -0 -I {} echo {} | rename
 }
 
 #######################
@@ -146,9 +222,7 @@ if [ $option -eq 0 ]; then
 	read -rp "Are You shure to rename the whole directory tree under '$(pwd)' (y/n?): " answer
 
 	if [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
-		echo "go"
-		# TODO: action
-
+		rename_tree
 		exit 0
 	else
 		echo "------------------------- cancelled -------------------------"
@@ -296,6 +370,7 @@ if [ $option -eq 52 ]; then
 	exit 0
 fi
 
+# help
 if [ $option -eq 6 ]; then
 
 	shift # either "--option" will be $1
