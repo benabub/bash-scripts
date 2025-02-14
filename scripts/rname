@@ -55,6 +55,19 @@ check_extension() {
 	fi
 }
 
+# takes 1 arg: old_str; echo new_str
+rename_str() {
+	local name="$1"
+
+	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
+		name=$(echo "$name" | sed 's/\([a-z]\)\([A-Z]\)/\1-\2/g')
+	fi
+
+	name="${name// /-}" # replace spaces with `-`
+	name="${name,,}" # lowercase
+	echo "$name"
+}
+
 # rename pattern (Perl)
 RP=" s/([a-z])([A-Z])/$1-$2/g;\
 	s/ /-/g;\
