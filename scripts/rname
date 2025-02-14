@@ -2,6 +2,7 @@
 
 # rename dir-tree (regular files & directories): lowercase + whitespaces -> '-'
 # ignoring files and dirs, which begin with `.` | `~`
+# matches existing paths and rename it with new indices
 # as options: exclude || add dirs to rename
 
 #######################
@@ -76,23 +77,11 @@ rename() {
 		local prefix="${path%/*}"
 		local name_old="${path##*/}"
 
-		# echo "--------------"
-		# echo "file_path - $path"
-
 		if check_extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
 			local extension="${name_old##*.}"
-
-			# echo "prefix - $prefix"
-			# echo "name_old - $name_old"
-			# echo "base_name- $base_name"
-			# echo "extension - $extension"
-
 			base_name_new="$(rename_str "$base_name")"
 			path_new="$prefix/$base_name_new.$extension"
-
-			# echo "base_name_new - $base_name_new"
-			# echo "path_new - $path_new"
 
 			# Check if the new name already exists
 			if [ -e "$path_new" ]; then
@@ -102,27 +91,15 @@ rename() {
 					((index++))
 				done
 				# Rename with the new unique name
-
-				# echo "result - $prefix/${base_name_new}-${index}.${extension}"
-
 				mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
 			else
 				# If does not exist, rename directly
-
-				# echo "result - $prefix/${base_name_new}.${extension}"
-
 				mv "$path" "$prefix/${base_name_new}.${extension}"
 			fi
 
 		else
-			# echo "prefix - $prefix"
-			# echo "name_old - $name_old"
-
 			name_new="$(rename_str "$name_old")"
 			path_new="$prefix/$name_new"
-
-			# echo "name_new - $name_new"
-			# echo "path_new - $path_new"
 
 			# Check if the new name already exists
 			if [ -e "$path_new" ]; then
@@ -132,15 +109,9 @@ rename() {
 					((index++))
 				done
 				# Rename with the new unique name
-				
-				# echo "result - $prefix/${name_new}-${index}"
-
 				mv "$path" "$prefix/${name_new}-${index}"
 			else
 				# If does not exist, rename directly
-
-				# echo "result - $prefix/${name_new}"
-
 				mv "$path" "$prefix/${name_new}"
 			fi
 		fi
