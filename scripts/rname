@@ -11,36 +11,51 @@
 
 option=0
 
+# takes 1 arg: question string
+ask() {
+	read -rp "$1" answer
+
+	if ! [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
+		echo "------------------------- cancelled -------------------------"
+		return 1
+	fi
+	return 0
+}
+
 check_no_args() {
 	if [ -n "$1" ]; then
 		echo "The command in this mode requires no argument"
-		exit 1
+		return 1
 	fi
+	return 0
 }
 
 check_no_more_opts() {
 	for i in "$@"; do
 		if [[ "$i" = -* ]]; then
 			echo "The command can take only one option"
-			exit 1
+			return 1
 		fi
 	done
+	return 0
 }
 
 check_arg_presented() {
 	if [ -z "$1" ]; then
 		echo "The command in this mode requires one or more arguments"
-		exit 1
+		return 1
 	fi
+	return 0
 }
 
 check_subdir() {
 	for d in "$@"; do
 		if [ ! -d "$(pwd)/$d" ]; then
 			echo "An arguments should be subdirectories of current working directory"
-			exit 1
+			return 1
 		fi
 	done
+	return 0
 }
 
 # takes 2 args: object path, object name
@@ -69,8 +84,8 @@ rename_str() {
 	echo "$name"
 }
 
-# Overwriting builtin rename command with a better variant
-# Function to rename a file with checking if new name already exists, else renaiming with index
+# overwriting builtin 'rename' command with a better variant
+# function to rename a file with checking if new name already exists, else renaiming with index
 rename() {
 	# getting stream from pipeline and working with each line
 	while IFS= read -r path; do
@@ -83,17 +98,17 @@ rename() {
 			base_name_new="$(rename_str "$base_name")"
 			path_new="$prefix/$base_name_new.$extension"
 
-			# Check if the new name already exists
+			# check if the new name already exists
 			if [ -e "$path_new" ]; then
-				# If exists, start appending index to find a unique name
+				# if exists, start appending index to find a unique name
 				local index=1
 				while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
 					((index++))
 				done
-				# Rename with the new unique name
+				# rename with the new unique name
 				mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
 			else
-				# If does not exist, rename directly
+				# if does not exist, rename directly
 				mv "$path" "$prefix/${base_name_new}.${extension}"
 			fi
 
@@ -101,17 +116,17 @@ rename() {
 			name_new="$(rename_str "$name_old")"
 			path_new="$prefix/$name_new"
 
-			# Check if the new name already exists
+			# check if the new name already exists
 			if [ -e "$path_new" ]; then
-				# If exists, start appending index to find a unique name
+				# if exists, start appending index to find a unique name
 				local index=1
 				while [ -e "$prefix/${name_new}-${index}" ]; do
 					((index++))
 				done
-				# Rename with the new unique name
+				# rename with the new unique name
 				mv "$path" "$prefix/${name_new}-${index}"
 			else
-				# If does not exist, rename directly
+				# if does not exist, rename directly
 				mv "$path" "$prefix/${name_new}"
 			fi
 		fi
@@ -123,21 +138,26 @@ rename() {
 rename_tree() {
 	# rename all subdirs in right order (from depth to cwd)
 	# either it will cause "dir not exist" errors
-
-	find . -depth -type d -wholename "./*" \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "[*A-Z*]" \) -print0 |
+	find . -depth -type d -wholename "./*" \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "*[A-Z]*" \) -print0 |
 		xargs -0 -I {} echo {} | rename
 
 	# rename all regular files in a tree
-
 	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
-		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "[*A-Z*]" \) -print0 |
+		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "*[A-Z]*" \) -print0 |
 		xargs -0 -I {} echo {} | rename
+}
+
+# takes list of dirs as separate args
+rename_dirs() {
+	pass
+	# echo "/path/to/folder1 /path/to/folder2 /path/to/folder3" | xargs -n 1 find
 }
 
 #######################
 # parsing the command
 #######################
 
+# TODO: add separator var + option
 case "$1" in
 --exclude | -e)
 	option=1
@@ -188,29 +208,24 @@ esac
 # no args
 if [ $option -eq 0 ]; then
 
-	check_no_more_opts "$@"
-	check_no_args "$@"
-	read -rp "Are You shure to rename the whole directory tree under '$(pwd)' (y/n?): " answer
-
-	if [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
-		rename_tree
-		exit 0
-	else
-		echo "------------------------- cancelled -------------------------"
-		exit 1
-	fi
+	check_no_more_opts "$@" || exit 1
+	check_no_args "$@" || exit 1
+	ask "Are You sure to rename the whole directory tree under '$(pwd)' (y/n?): " || exit 1
+	rename_tree
+	exit 0
 fi
 
 # exclude
 if [ $option -eq 1 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -218,12 +233,13 @@ fi
 if [ $option -eq 2 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -231,11 +247,12 @@ fi
 if [ $option -eq 3 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_no_args "$@"
+	check_no_more_opts "$@" || exit 1
+	check_no_args "$@" || exit 1
+	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -243,25 +260,27 @@ fi
 if [ $option -eq 31 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
-# exclude + only
+# only + files
 if [ $option -eq 32 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -269,11 +288,12 @@ fi
 if [ $option -eq 4 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_no_args "$@"
+	check_no_more_opts "$@" || exit 1
+	check_no_args "$@" || exit 1
+	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -281,12 +301,13 @@ fi
 if [ $option -eq 41 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -294,12 +315,13 @@ fi
 if [ $option -eq 42 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -307,11 +329,12 @@ fi
 if [ $option -eq 5 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_no_args "$@"
+	check_no_more_opts "$@" || exit 1
+	check_no_args "$@" || exit 1
+	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -319,12 +342,13 @@ fi
 if [ $option -eq 51 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -332,12 +356,13 @@ fi
 if [ $option -eq 52 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_arg_presented "$@"
-	check_subdir "$@"
+	check_no_more_opts "$@" || exit 1
+	check_arg_presented "$@" || exit 1
+	check_subdir "$@" || exit 1
+	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
 	# TODO: action
-
+	
 	exit 0
 fi
 
@@ -345,8 +370,8 @@ fi
 if [ $option -eq 6 ]; then
 
 	shift # either "--option" will be $1
-	check_no_more_opts "$@"
-	check_no_args "$@"
+	check_no_more_opts "$@" || exit 1
+	check_no_args "$@" || exit 1
 
 	# TODO: action
 fi
