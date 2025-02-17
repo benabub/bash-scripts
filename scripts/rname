@@ -10,6 +10,8 @@
 #######################
 
 option=0
+manual_files=0
+manual_dirs=0
 
 # takes 1 arg: question string
 ask() {
@@ -84,8 +86,38 @@ rename_str() {
 	echo "$name"
 }
 
+# TODO:
+
+# adding prefix ./ to path when its absent
+path_correct() {
+	for i in "$@"; do
+		if [[ "$i" =~ ^\.\/.* ]]; then
+			echo "$i"
+		else
+			echo "./$i"
+		fi
+	done
+}
+
+only() {
+	pass
+}
+
+exlude() {
+	pass
+}
+	# echo "/path/to/folder1 /path/to/folder2 /path/to/folder3" | xargs -n 1 find
+
+# for i in *; do
+#   if [ -d "$i" ]; then
+#     echo "$i"
+#   fi
+# done
+#
+#find . -maxdepth 1 -type d
 # overwriting builtin 'rename' command with a better variant
 # function to rename a file with checking if new name already exists, else renaiming with index
+
 rename() {
 	# getting stream from pipeline and working with each line
 	while IFS= read -r path; do
@@ -135,22 +167,28 @@ rename() {
 
 }
 
-rename_tree() {
-	# rename all subdirs in right order (from depth to cwd)
-	# either it will cause "dir not exist" errors
+find_dirs() {
+	# find all subdirs in right order (from depth to cwd)
+	# either it will cause "dir not exist" errors with mv command further
 	find . -depth -type d -wholename "./*" \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "*[A-Z]*" \) -print0 |
-		xargs -0 -I {} echo {} | rename
+		xargs -0 -I {} echo {}
+}
 
+find_files() {
 	# rename all regular files in a tree
 	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
 		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "*[A-Z]*" \) -print0 |
-		xargs -0 -I {} echo {} | rename
+		xargs -0 -I {} echo {}
+}
+
+rename_tree() {
+	find_dirs | rename
+	find_files | rename
 }
 
 # takes list of dirs as separate args
 rename_dirs() {
-	pass
-	# echo "/path/to/folder1 /path/to/folder2 /path/to/folder3" | xargs -n 1 find
+	path_correct "$@" | rename
 }
 
 #######################
@@ -167,30 +205,42 @@ case "$1" in
 	;;
 --files | -f)
 	option=3
+	manual_files=1
 	;;
 --excludefiles | -ef | -fe)
 	option=31
+	manual_files=1
 	;;
 --onlyfiles | -of | -fo)
 	option=32
+	manual_files=1
 	;;
 --dirs | -d)
 	option=4
+	manual_dirs=1
 	;;
 --excludedirs | -ed | -de)
 	option=41
+	manual_dirs=1
 	;;
 --onlydirs | -od | -do)
 	option=42
+	manual_dirs=1
 	;;
 --both | -b)
 	option=5
+	manual_files=1
+	manual_dirs=1
 	;;
 --excludeboth | -eb | -be)
 	option=51
+	manual_files=1
+	manual_dirs=1
 	;;
 --onlyboth | -ob | -bo)
 	option=52
+	manual_files=1
+	manual_dirs=1
 	;;
 --help | -h)
 	option=6
@@ -207,7 +257,6 @@ esac
 
 # no args
 if [ $option -eq 0 ]; then
-
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)' (y/n?): " || exit 1
@@ -217,7 +266,6 @@ fi
 
 # exclude
 if [ $option -eq 1 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -231,7 +279,6 @@ fi
 
 # only
 if [ $option -eq 2 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -245,7 +292,6 @@ fi
 
 # files
 if [ $option -eq 3 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
@@ -258,7 +304,6 @@ fi
 
 # exclude + files
 if [ $option -eq 31 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -272,7 +317,6 @@ fi
 
 # only + files
 if [ $option -eq 32 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -286,7 +330,6 @@ fi
 
 # dirs
 if [ $option -eq 4 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
@@ -299,7 +342,6 @@ fi
 
 # exclude + dirs
 if [ $option -eq 41 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -313,7 +355,6 @@ fi
 
 # only + dirs
 if [ $option -eq 42 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -327,7 +368,6 @@ fi
 
 # both
 if [ $option -eq 5 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
@@ -340,7 +380,6 @@ fi
 
 # exclude + both
 if [ $option -eq 51 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -354,7 +393,6 @@ fi
 
 # only + both
 if [ $option -eq 52 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
@@ -368,7 +406,6 @@ fi
 
 # help
 if [ $option -eq 6 ]; then
-
 	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
