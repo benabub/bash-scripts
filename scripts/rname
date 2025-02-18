@@ -86,8 +86,6 @@ rename_str() {
 	echo "$name"
 }
 
-# TODO:
-
 # adding prefix ./ to path when its absent
 path_correct() {
 	for i in "$@"; do
@@ -99,11 +97,13 @@ path_correct() {
 	done
 }
 
+# TODO:
+
 only() {
 	pass
 }
 
-exlude() {
+exclude() {
 	pass
 }
 	# echo "/path/to/folder1 /path/to/folder2 /path/to/folder3" | xargs -n 1 find
@@ -115,9 +115,9 @@ exlude() {
 # done
 #
 #find . -maxdepth 1 -type d
+
 # overwriting builtin 'rename' command with a better variant
 # function to rename a file with checking if new name already exists, else renaiming with index
-
 rename() {
 	# getting stream from pipeline and working with each line
 	while IFS= read -r path; do
@@ -167,29 +167,36 @@ rename() {
 
 }
 
+# find all subdirs in right order (from depth to cwd)
+# either it will cause "dir not exist" errors with mv command further
+
 find_dirs() {
-	# find all subdirs in right order (from depth to cwd)
-	# either it will cause "dir not exist" errors with mv command further
-	find . -depth -type d -wholename "./*" \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "*[A-Z]*" \) -print0 |
+	find "$@" -depth -type d ! \( -iname ".*" -o -iname "~*" \) -a \( -name "* *" -o -name "*[A-Z]*" \) -print0 |
 		xargs -0 -I {} echo {}
 }
 
+# rename all regular files in a tree
 find_files() {
-	# rename all regular files in a tree
-	find . ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
-		-type f \( ! -iname ".*" -a ! -iname "~*" -a -name "* *" -o -name "*[A-Z]*" \) -print0 |
+	find "$@" ! -name "." -type d \( -iname '.*' -o -iname '~*' \) -prune -o\
+		-type f ! \( -iname ".*" -o -iname "~*" \) -a \( -name "* *" -o -name "*[A-Z]*" \) -print0 |
 		xargs -0 -I {} echo {}
 }
 
 rename_tree() {
-	find_dirs | rename
-	find_files | rename
+	find_dirs "." | rename
+	find_files "." | rename
 }
 
 # takes list of dirs as separate args
 rename_dirs() {
 	path_correct "$@" | rename
 }
+
+#######################
+# tests area
+#######################
+
+
 
 #######################
 # parsing the command
