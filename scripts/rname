@@ -86,41 +86,18 @@ rename_str() {
 	echo "$name"
 }
 
-# adding prefix ./ to path when its absent
-path_correct() {
-	for i in "$@"; do
-		if [[ "$i" =~ ^\.\/.* ]]; then
-			echo "$i"
-		else
-			echo "./$i"
-		fi
-	done
-}
-
-# TODO:
-
-only() {
-	pass
-}
-
-exclude() {
-	pass
-}
-	# echo "/path/to/folder1 /path/to/folder2 /path/to/folder3" | xargs -n 1 find
-
-# for i in *; do
-#   if [ -d "$i" ]; then
-#     echo "$i"
-#   fi
-# done
-#
-#find . -maxdepth 1 -type d
-
 # overwriting builtin 'rename' command with a better variant
 # function to rename a file with checking if new name already exists, else renaiming with index
 rename() {
-	# getting stream from pipeline and working with each line
-	while IFS= read -r path; do
+	# Function to process a single file path
+	single_path(){
+		local path="$1"
+
+		# adding prefix ./ to path when its absent
+		if ! [[ "$path" =~ ^\.\/.* ]]; then
+			path="./$i"
+		fi
+
 		local prefix="${path%/*}"
 		local name_old="${path##*/}"
 
@@ -143,7 +120,6 @@ rename() {
 				# if does not exist, rename directly
 				mv "$path" "$prefix/${base_name_new}.${extension}"
 			fi
-
 		else
 			name_new="$(rename_str "$name_old")"
 			path_new="$prefix/$name_new"
@@ -162,14 +138,22 @@ rename() {
 				mv "$path" "$prefix/${name_new}"
 			fi
 		fi
-
-	done
-
+	}
+	# Check if there are arguments; if yes, iterate over them
+	if [ "$#" -gt 0 ]; then
+		for path in "$@"; do
+			single_path "$path"
+		done
+	else
+		# If no arguments, read from stdin
+		while IFS= read -r path; do
+			single_path "$path"
+		done
+	fi
 }
 
 # find all subdirs in right order (from depth to cwd)
 # either it will cause "dir not exist" errors with mv command further
-
 find_dirs() {
 	find "$@" -depth -type d ! \( -iname ".*" -o -iname "~*" \) -a \( -name "* *" -o -name "*[A-Z]*" \) -print0 |
 		xargs -0 -I {} echo {}
@@ -187,9 +171,40 @@ rename_tree() {
 	find_files "." | rename
 }
 
-# takes list of dirs as separate args
-rename_dirs() {
-	path_correct "$@" | rename
+only() {
+	local cwd=""
+	cwd=$(pwd)
+
+	for dir in "$@"; do
+		if cd "$dir"; then
+			rename_tree
+			cd "$cwd" && rename "$dir" || echo "Failed to rename '$dir'"
+		else
+			echo "Failed to change directory to '$dir'"
+		fi
+	done
+}
+
+# only() {
+# 	local cwd=""
+# 	cwd=$(pwd)
+# 	for dir in "$@"; do
+# 		if cd "$dir"; then
+# 			rename_tree
+# 		else
+# 			echo "Failed to change directory to '$dir'"
+# 		fi
+# 		# Change back to the original directory
+# 		if cd "$cwd"; then
+# 			rename "$dir"
+# 		else
+# 			echo "Failed to rename '$dir'"
+# 		fi
+# 	done
+# }
+
+exclude() {
+	pass
 }
 
 #######################
@@ -197,12 +212,11 @@ rename_dirs() {
 #######################
 
 
-
 #######################
 # parsing the command
 #######################
 
-# TODO: add separator var + option
+# TODO: add separator: var + option
 case "$1" in
 --exclude | -e)
 	option=1
@@ -293,6 +307,7 @@ if [ $option -eq 2 ]; then
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names (y/n?): " || exit 1
 
 	# TODO: action
+	only "$@"
 	
 	exit 0
 fi
@@ -331,6 +346,7 @@ if [ $option -eq 32 ]; then
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
+	only "$@"
 	
 	exit 0
 fi
@@ -369,6 +385,7 @@ if [ $option -eq 42 ]; then
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
 	# TODO: action
+	only "$@"
 	
 	exit 0
 fi
@@ -407,6 +424,7 @@ if [ $option -eq 52 ]; then
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
 	# TODO: action
+	only "$@"
 	
 	exit 0
 fi
