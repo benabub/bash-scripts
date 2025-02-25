@@ -152,23 +152,20 @@ rename() {
 	fi
 }
 
-# find all subdirs in right order (from depth to cwd)
-# either it will cause "dir not exist" errors with mv command further
-find_dirs() {
-	find . -depth -type d ! \( -name ".*" -o -name "~*" \) -a \( -name "* *" -o -name "*[A-Z]*" \) -print0 |
-		xargs -0 -I {} echo {}
-}
-
-# rename all regular files in a tree
-find_files() {
-	find . ! -name "." -type d \( -name '.*' -o -name '~*' \) -prune -o\
-		-type f ! \( -name ".*" -o -name "~*" \) -a \( -name "* *" -o -name "*[A-Z]*" \) -print0 |
-		xargs -0 -I {} echo {}
-}
-
 rename_tree() {
-	find_dirs | rename
-	find_files | rename
+	# find all subdirs in right order (from depth to cwd)
+	# either it will cause "dir not exist" errors with mv command further
+	find . \
+-depth \
+-type d ! \( -name ".*" -o -name "~*" \) \
+-a \( -name "* *" -o -name "*[A-Z]*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
+	# rename all regular files in a tree
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name ".*" -o -name "~*" \) \
+-a \( -name "* *" -o -name "*[A-Z]*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
 }
 
 only() {
@@ -191,38 +188,20 @@ exclude() {
 		if [[ "$pattern" =~ .*\/.* ]]; then
 			pattern="${pattern##*/}"
 		fi
-
-		echo "--------------"
-		echo "pattern >$pattern<"
-		echo "--------------"
-
 		exclude_dirs+="-o -name '$pattern' "
 	done
 
-	str_dirs="find . \
+	eval "find . \
 -depth \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | rename"
 
-	str_files="find . \
+	eval "find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[A-Z]*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-
-	echo "exclude_dirs >$exclude_dirs<"
-	echo "--------------"
-	echo "str_dirs >$str_dirs<"
-	echo "--------------"
-	echo "str_files >$str_files<"
-	echo "---- eval dirs ----------"
-	eval "$str_dirs"
-	echo "---- eval files ----------"
-	eval "$str_files"
-
-	eval "$str_dirs | rename"
-	eval "$str_files | rename"
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | rename"
 }
 
 #######################
