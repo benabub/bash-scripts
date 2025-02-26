@@ -16,7 +16,6 @@ manual_dirs=0
 # takes 1 arg: question string
 ask() {
 	read -rp "$1" answer
-
 	if ! [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
 		echo "------------------------- cancelled -------------------------"
 		return 1
@@ -65,7 +64,6 @@ check_extension() {
 	local path="$1"
 	local name="$2"
 	local regex='^.+\.[a-zA-Z0-9\-\/]+$'
-
 	if [ -e "$path" ] && [[ "$name" =~ $regex ]]; then
 		return 0
 	else
@@ -76,11 +74,9 @@ check_extension() {
 # takes 1 arg: old_str; echo new_str
 rename_str() {
 	local name="$1"
-
 	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
 		name=$(echo "$name" | sed 's/\([a-z]\)\([A-Z]\)/\1-\2/g')
 	fi
-
 	name="${name// /-}" # replace spaces with `-`
 	name="${name,,}" # lowercase
 	echo "$name"
@@ -95,7 +91,7 @@ rename() {
 
 		# adding prefix ./ to path when its absent
 		if ! [[ "$path" =~ ^\.\/.* ]]; then
-			path="./$i"
+			path="./$path"
 		fi
 
 		local prefix="${path%/*}"
@@ -152,14 +148,23 @@ rename() {
 	fi
 }
 
+# sort strings by the number of '/' symbols (replacement for -depth in find command to use in pipeline)
+sort_by_slashes() {
+	# Read from stdin
+	while IFS= read -r line; do
+		# Count '/' symbols and print count and line
+		count=$(grep -o "/" <<< "$line" | wc -l)
+		echo "$count $line"
+	done | sort -nr | awk '{$1=""; print substr($0, 2)}'
+}
+
 rename_tree() {
 	# find all subdirs in right order (from depth to cwd)
 	# either it will cause "dir not exist" errors with mv command further
 	find . \
--depth \
--type d ! \( -name ".*" -o -name "~*" \) \
--a \( -name "* *" -o -name "*[A-Z]*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
 	# rename all regular files in a tree
 	find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
@@ -172,9 +177,17 @@ only() {
 	local cwd=""
 	cwd=$(pwd)
 	for dir in "$@"; do
+		# cutting off ending `/` if presented
+		if [[ "$dir" =~ .*\/$ ]]; then
+			dir="${dir%/}"
+		fi
 		if cd "$dir"; then
 			rename_tree
-			cd "$cwd" && rename "$dir" || echo "Failed to rename '$dir'"
+			if cd "$cwd"; then
+				rename "$dir"
+			else
+				echo "Failed to rename '$dir'"
+			fi
 		else
 			echo "Failed to change directory to '$dir'"
 		fi
@@ -184,24 +197,29 @@ only() {
 exclude() {
 	local exclude_dirs=""
 	for pattern in "$@"; do
-		# cutting off prefix from path to basename
-		if [[ "$pattern" =~ .*\/.* ]]; then
-			pattern="${pattern##*/}"
+		# cutting off ending `/` if presented
+		if [[ "$pattern" == */ ]]; then
+			pattern="${pattern%/}"
 		fi
-		exclude_dirs+="-o -name '$pattern' "
+		# adding prefix ./ to path when its absent
+		if ! [[ "$pattern" =~ ^\.\/.* ]]; then
+			pattern="./$pattern"
+		fi
+		exclude_dirs+="-o -path '$pattern' "
 	done
 
-	eval "find . \
--depth \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | rename"
-
-	eval "find . \
+	str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[A-Z]*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | rename"
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_files | rename"
+
+	str_dirs="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_dirs | sort_by_slashes | rename"
 }
 
 #######################
@@ -278,7 +296,9 @@ if [ $option -eq 0 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)' (y/n?): " || exit 1
+
 	rename_tree
+
 	exit 0
 fi
 
@@ -290,7 +310,6 @@ if [ $option -eq 2 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names (y/n?): " || exit 1
 
-	# TODO: action
 	only "$@"
 	
 	exit 0
@@ -304,7 +323,6 @@ if [ $option -eq 1 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content (y/n?): " || exit 1
 
-	# TODO: action
 	exclude "$@"
 	
 	exit 0
