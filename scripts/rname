@@ -17,7 +17,7 @@ manual_dirs=0
 ask() {
 	read -rp "$1" answer
 	if ! [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
-		echo "------------------------- cancelled -------------------------"
+		echo "----------------- cancelled -----------------"
 		return 1
 	fi
 	return 0
@@ -82,57 +82,163 @@ rename_str() {
 	echo "$name"
 }
 
+
 # overwriting builtin 'rename' command with a better variant
 # function to rename a file with checking if new name already exists, else renaiming with index
+# handle both arg and stdin
+# performs manual renaming of non-ASCII names if necessary
 rename() {
-	# Function to process a single file path
-	single_path(){
+	auto_rename() {
 		local path="$1"
-
-		# adding prefix ./ to path when its absent
-		if ! [[ "$path" =~ ^\.\/.* ]]; then
-			path="./$path"
-		fi
-
 		local prefix="${path%/*}"
 		local name_old="${path##*/}"
+
+
+		echo "auto rename: >$path<"
+		echo "-----------------------"
+
+
+		# if check_extension "$path" "$name_old"; then
+		# 	local base_name="${name_old%.*}"
+		# 	local extension="${name_old##*.}"
+		#
+		# 	base_name_new="$(rename_str "$base_name")"
+		# 	path_new="$prefix/$base_name_new.$extension"
+		#
+		# 	# check if the new name already exists
+		# 	if [ -e "$path_new" ]; then
+		# 		# if exists, start appending index to find a unique name
+		# 		local index=1
+		# 		while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
+		# 			((index++))
+		# 		done
+		# 		# rename with the new unique name
+		# 		mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+		# 	else
+		# 		# if does not exist, rename directly
+		# 		mv "$path" "$prefix/${base_name_new}.${extension}"
+		# 	fi
+		# else
+		# 	name_new="$(rename_str "$name_old")"
+		# 	path_new="$prefix/$name_new"
+		#
+		# 	# check if the new name already exists
+		# 	if [ -e "$path_new" ]; then
+		# 		# if exists, start appending index to find a unique name
+		# 		local index=1
+		# 		while [ -e "$prefix/${name_new}-${index}" ]; do
+		# 			((index++))
+		# 		done
+		# 		# rename with the new unique name
+		# 		mv "$path" "$prefix/${name_new}-${index}"
+		# 	else
+		# 		# if does not exist, rename directly
+		# 		mv "$path" "$prefix/${name_new}"
+		# 	fi
+		# fi
+	}
+
+	manual_rename() {
+		local path="$1"
+		local prefix="${path%/*}"
+		local name_old="${path##*/}"
+		local obj=""
+		# save the path type as a str
+		if [ -d "$path" ]; then
+			obj="[DIR]"
+		else
+			obj="[file]"
+		fi
+
+
+		echo "--------- Manual Renaming: 100% -------------"
+		echo "path >$path<"
+
 
 		if check_extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
 			local extension="${name_old##*.}"
-			base_name_new="$(rename_str "$base_name")"
+
+
+			echo "check_extension - true"
+
+
+			read -rp "$obj $base_name: " base_name_new </dev/tty
+
+
 			path_new="$prefix/$base_name_new.$extension"
 
-			# check if the new name already exists
-			if [ -e "$path_new" ]; then
-				# if exists, start appending index to find a unique name
-				local index=1
-				while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
-					((index++))
-				done
-				# rename with the new unique name
-				mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
-			else
-				# if does not exist, rename directly
-				mv "$path" "$prefix/${base_name_new}.${extension}"
-			fi
+			echo "path_new >$path_new<"
+			echo "-----------------------"
+
+			# # check if the new name already exists
+			# if [ -e "$path_new" ]; then
+			# 	# if exists, start appending index to find a unique name
+			# 	local index=1
+			# 	while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
+			# 		((index++))
+			# 	done
+			# 	# rename with the new unique name
+			# 	mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+			# else
+			# 	# if does not exist, rename directly
+			# 	mv "$path" "$prefix/${base_name_new}.${extension}"
+			# fi
 		else
-			name_new="$(rename_str "$name_old")"
+
+
+			echo "check_extension - false"
+
+
+			read -rp "$obj $name_old: " name_new </dev/tty
+
+
 			path_new="$prefix/$name_new"
 
-			# check if the new name already exists
-			if [ -e "$path_new" ]; then
-				# if exists, start appending index to find a unique name
-				local index=1
-				while [ -e "$prefix/${name_new}-${index}" ]; do
-					((index++))
-				done
-				# rename with the new unique name
-				mv "$path" "$prefix/${name_new}-${index}"
-			else
-				# if does not exist, rename directly
-				mv "$path" "$prefix/${name_new}"
-			fi
+
+			echo "path_new >$path_new<"
+			echo "-----------------------"
+
+
+			# # check if the new name already exists
+			# if [ -e "$path_new" ]; then
+			# 	# if exists, start appending index to find a unique name
+			# 	local index=1
+			# 	while [ -e "$prefix/${name_new}-${index}" ]; do
+			# 		((index++))
+			# 	done
+			# 	# rename with the new unique name
+			# 	mv "$path" "$prefix/${name_new}-${index}"
+			# else
+			# 	# if does not exist, rename directly
+			# 	mv "$path" "$prefix/${name_new}"
+			# fi
+		fi
+	}
+	# Function to process a single file path
+	single_path() {
+		local path="$1"
+		# adding prefix `./` to path when its absent
+		if ! [[ "$path" =~ ^\.\/.* ]]; then
+			path="./$path"
+		fi
+		local name="${path##*/}"
+
+		# choosing the way of renaming: manual / auto
+		if { [ $manual_files -eq 1 ] && [ -f "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; } || \
+			{ [ $manual_dirs -eq 1 ] && [ -d "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; }; then
+
+
+			echo "manual true"
+
+
+			manual_rename "$path"
+		else
+
+
+			echo "manual false"
+
+			auto_rename "$path"
 		fi
 	}
 	# Check if there are arguments; if yes, iterate over them
@@ -158,19 +264,85 @@ sort_by_slashes() {
 	done | sort -nr | awk '{$1=""; print substr($0, 2)}'
 }
 
+# filter paths in pipelines by RE conditions in basename
+filter_paths() {
+	while IFS= read -r path; do
+		local name=""
+		name=$(basename "$path")
+		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]"; then
+			echo "$path"
+		fi
+	done
+}
+
 rename_tree() {
-	# find all subdirs in right order (from depth to cwd)
-	# either it will cause "dir not exist" errors with mv command further
-	find . \
+
+	rename_dirs_auto() { # rename all subdirs from depth to cwd
+		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
-	# rename all regular files in a tree
-	find . \
+	}
+
+	rename_files_auto() { # rename all regular files in a tree
+		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name ".*" -o -name "~*" \) \
--a \( -name "* *" -o -name "*[A-Z]*" \) \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
+	}
+
+	rename_dirs_manual() {
+		local temp_file
+		temp_file=$(mktemp)
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+filter_paths | sort_by_slashes >> "$temp_file"
+
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
+	}
+
+	rename_files_manual() {
+		local temp_file
+		temp_file=$(mktemp)
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+filter_paths >> "$temp_file"
+
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
+	}
+
+	# no manual
+	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
+		rename_dirs_auto
+		rename_files_auto
+		exit 0
+	fi
+	# manual renaming dirs
+	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
+		rename_dirs_manual
+		rename_files_auto
+		exit 0
+	fi
+	# manual renaming files
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
+		rename_dirs_auto
+		rename_files_manual
+		exit 0
+	fi
+	# manual renaming both (files + dirs)
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
+		rename_dirs_manual
+		rename_files_manual
+	fi
 }
 
 only() {
@@ -211,13 +383,13 @@ exclude() {
 	str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_files | rename"
 
 	str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_dirs | sort_by_slashes | rename"
 }
