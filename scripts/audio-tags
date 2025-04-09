@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# Проверка аргументов
+if [ $# -lt 2 ]; then
+  echo "Usage: $0 /path/to/folder 'Artist Name'"
+  exit 1
+fi
+
+TARGET_DIR="$1"
+ARTIST_NAME="$2"
+
+# Функция строгой нормализации строк
+strict_normalize() {
+  local str="$1"
+  # Удаляем все не-буквенные символы в начале
+  while [[ "$str" =~ ^[^а-яА-Яa-zA-Z] ]]; do
+    str="${str:1}"
+  done
+  # Удаляем все не-буквенные символы в конце
+  while [[ "$str" =~ [^а-яА-Яa-zA-Z]$ ]]; do
+    str="${str%?}"
+  done
+  # Заменяем множественные разделители
+  echo "$str" | sed -E 's/[[:space:]_\-]+/ /g; s/^ //; s/ $//'
+}
+
+# Функция обработки файла
+process_file() {
+  local file="$1"
+  
+  # Получаем информацию о файле
+  local dir_path=$(dirname "$file")
+  local raw_album=$(basename "$dir_path")
+  local raw_title=$(basename "$file" | sed 's/\.[^.]*$//')
+  
+  # Обрабатываем название альбома
+  local album=$(echo "$raw_album" | sed -E 's/^[0-9]{1,3}[[:space:]]*\-+[[:space:]]*//')
+  album=$(strict_normalize "$album")
+  
+  # Обрабатываем название трека
+  local title=$(echo "$raw_title" | sed -E 's/^[0-9]{1,3}[[:space:]]*\-+[[:space:]]*//; s/\-+[0-9]+$//')
+  title=$(strict_normalize "$title")
+  
+  # Извлекаем номер трека
+  local track_num=""
+  [[ "$raw_title" =~ ^[0-9]+ ]] && track_num=$(echo "$raw_title" | grep -o '^[0-9]\+')
+
+  # Удаляем все существующие теги
+  eyeD3 --remove-all "$file" >/dev/null 2>&1
+  
+  # Устанавливаем новые теги
+  eyeD3 \
+    --to-v2.3 \
+    --encoding=utf8 \
+    --artist="$ARTIST_NAME" \
+    --album="$album" \
+    --title="$title" \
+    ${track_num:+--track="$track_num"} \
+    "$file" >/dev/null 2>&1
+  
+  # Вывод информации
+  echo "Processed: $(basename "$file")"
+  echo "  Artist: $ARTIST_NAME"
+  echo "  Album: $album"
+  echo "  Title: $title"
+  [ -n "$track_num" ] && echo "  Track: $track_num"
+  echo "------------------------------------"
+}
+
+# Основной цикл обработки
+find "$TARGET_DIR" -type f \( -iname "*.mp3" -o -iname "*.MP3" -o -iname "*.mp4" -o -iname "*.MP4" \) -print0 | \
+while IFS= read -r -d $'\0' file; do
+  process_file "$file"
+done
+
+rm -rf ~/.config/cmus
+
+echo "Processing complete!"
+echo "cmus cache cleaned"

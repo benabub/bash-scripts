@@ -1,7 +1,0 @@
-#!/bin/bash
-
-# rename objects, adding date as prefix to name
-
-name=$(date "+%Y-%m-%d")_$1
-
-mv $1 $name
