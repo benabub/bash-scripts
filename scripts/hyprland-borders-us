@@ -1,0 +1,7 @@
+#!/bin/bash
+
+ACTIVE="rgb(639CC4)"
+INACTIVE="rgb(09589D)"
+
+sed -i "1s/.*/\$active = $ACTIVE/" ~/.config/hypr/UserConfigs/UserDecorations.conf
+sed -i "2s/.*/\$inactive = $INACTIVE/" ~/.config/hypr/UserConfigs/UserDecorations.conf

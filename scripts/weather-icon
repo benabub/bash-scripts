@@ -3,8 +3,12 @@
 import os
 import requests
 import sys
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
 from time import sleep
+from pathlib import Path
+
+CACHE_FILE = Path.home() / ".cache" / "weather_icon_cache.json"
 
 
 def get_weather_icon():
@@ -49,8 +53,17 @@ def get_weather_icon():
                     'Fog': '🌫️'
                 }
 
-                # Default icon (unknown weather)
-                return icons.get(weather_main, '🌀')
+                icon = icons.get(weather_main, '🌀')
+
+                cache_data = {
+                    'icon': icon,
+                    'timestamp': datetime.now().timestamp()
+                }
+                CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+                with open(CACHE_FILE, 'w') as f:
+                    json.dump(cache_data, f)
+
+                return icon
 
             except requests.exceptions.Timeout:
                 if attempt < retries - 1:
@@ -59,7 +72,17 @@ def get_weather_icon():
                 raise
 
     except Exception as e:
-        print(f"Ошибка: {e}", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
+        try:
+            if CACHE_FILE.exists():
+                with open(CACHE_FILE) as f:
+                    cache_data = json.load(f)
+                cache_time = datetime.fromtimestamp(cache_data['timestamp'])
+                if datetime.now() - cache_time < timedelta(hours=1):
+                    return cache_data['icon']
+        except Exception as cache_error:
+            print(f"Cache read error: {cache_error}", file=sys.stderr)
+
         return "E"
 
 
