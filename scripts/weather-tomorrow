@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from time import sleep
 from pathlib import Path
 
-# Путь к файлу кэша
 CACHE_FILE = Path.home() / ".cache" / "weather_tomorrow_cache.json"
 
 
@@ -50,7 +49,6 @@ def get_tomorrow_weather():
 
                 weather_data = f"{temp:+d}"
 
-                # Сохраняем успешный результат в кэш
                 cache_data = {
                     'weather': weather_data,
                     'timestamp': datetime.now().timestamp(),
@@ -70,13 +68,11 @@ def get_tomorrow_weather():
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
-        # Пытаемся прочитать кэш
         try:
             if CACHE_FILE.exists():
                 with open(CACHE_FILE) as f:
                     cache_data = json.load(f)
 
-                # Проверяем, что кэш актуален (не старше 6 часов И для сегодняшней даты)
                 cache_time = datetime.fromtimestamp(cache_data['timestamp'])
                 current_tomorrow_date = (
                     datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')

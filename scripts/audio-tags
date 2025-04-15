@@ -1,79 +1,125 @@
 #!/bin/bash
 
-# Проверка аргументов
-if [ $# -lt 2 ]; then
-  echo "Usage: $0 /path/to/folder 'Artist Name'"
-  exit 1
+# Check arguments
+if [ $# -lt 1 ]; then
+	TARGET_DIR="."
+else
+	TARGET_DIR="$1"
 fi
 
-TARGET_DIR="$1"
-ARTIST_NAME="$2"
+# Get absolute path
+TARGET_DIR=$(realpath "$TARGET_DIR")
 
-# Функция строгой нормализации строк
+# Function for strict string normalization
 strict_normalize() {
-  local str="$1"
-  # Удаляем все не-буквенные символы в начале
-  while [[ "$str" =~ ^[^а-яА-Яa-zA-Z] ]]; do
-    str="${str:1}"
-  done
-  # Удаляем все не-буквенные символы в конце
-  while [[ "$str" =~ [^а-яА-Яa-zA-Z]$ ]]; do
-    str="${str%?}"
-  done
-  # Заменяем множественные разделители
-  echo "$str" | sed -E 's/[[:space:]_\-]+/ /g; s/^ //; s/ $//'
+	local str
+	str="$1"
+	# Remove all non-letter characters from beginning
+	while [[ "$str" =~ ^[^а-яА-Яa-zA-Z0-9] ]]; do
+		str="${str:1}"
+	done
+	# Remove all non-letter characters from end
+	while [[ "$str" =~ [^а-яА-Яa-zA-Z0-9]$ ]]; do
+		str="${str%?}"
+	done
+	# Replace multiple separators
+	echo "$str" | sed -E 's/[[:space:]_\-]+/ /g; s/^ //; s/ $//'
 }
 
-# Функция обработки файла
+# Function to process album name
+process_album_name() {
+	local album
+	album="$1"
+	
+	local year
+	# Extract year prefix (19xx or 20xx)
+	if [[ "$album" =~ (19[0-9]{2}|2[0-9]{3}) ]]; then
+		year="${BASH_REMATCH[1]}"
+		album=$(echo "$album" | sed -E "s/${year}[[:space:]]*//")
+		album="$year: $album"
+	fi
+	# Remove track number prefix if exists
+	album=$(echo "$album" | sed -E 's/^[0-9]{1,3}[[:space:]]*\-+[[:space:]]*//')
+	# Normalize
+	strict_normalize "$album"
+}
+
+# Function to process track name
+process_track_name() {
+	local title
+	title="$1"
+	# Remove track number prefix if exists
+	title=$(echo "$title" | sed -E 's/^[0-9]{1,3}[[:space:]]*\-+[[:space:]]*//')
+	# Normalize
+	strict_normalize "$title"
+}
+
+# File processing function
 process_file() {
-  local file="$1"
-  
-  # Получаем информацию о файле
-  local dir_path=$(dirname "$file")
-  local raw_album=$(basename "$dir_path")
-  local raw_title=$(basename "$file" | sed 's/\.[^.]*$//')
-  
-  # Обрабатываем название альбома
-  local album=$(echo "$raw_album" | sed -E 's/^[0-9]{1,3}[[:space:]]*\-+[[:space:]]*//')
-  album=$(strict_normalize "$album")
-  
-  # Обрабатываем название трека
-  local title=$(echo "$raw_title" | sed -E 's/^[0-9]{1,3}[[:space:]]*\-+[[:space:]]*//; s/\-+[0-9]+$//')
-  title=$(strict_normalize "$title")
-  
-  # Извлекаем номер трека
-  local track_num=""
-  [[ "$raw_title" =~ ^[0-9]+ ]] && track_num=$(echo "$raw_title" | grep -o '^[0-9]\+')
+	local file
+	local artist_name
+	file="$1"
+	artist_name="$2"
+	
+	# Get file info
+	local dir_path
+	local raw_album
+	local raw_title
+	dir_path=$(dirname "$file")
+	raw_album=$(basename "$dir_path")
+	raw_title=$(basename "$file" | sed 's/\.[^.]*$//')
+	
+	# Process album name
+	local album
+	album=$(process_album_name "$raw_album")
+	
+	# Process track name
+	local title
+	title=$(process_track_name "$raw_title")
+	
+	# Extract track number
+	local track_num
+	track_num=""
+	[[ "$raw_title" =~ ^[0-9]+ ]] && track_num=$(echo "$raw_title" | grep -o '^[0-9]\+')
 
-  # Удаляем все существующие теги
-  eyeD3 --remove-all "$file" >/dev/null 2>&1
-  
-  # Устанавливаем новые теги
-  eyeD3 \
-    --to-v2.3 \
-    --encoding=utf8 \
-    --artist="$ARTIST_NAME" \
-    --album="$album" \
-    --title="$title" \
-    ${track_num:+--track="$track_num"} \
-    "$file" >/dev/null 2>&1
-  
-  # Вывод информации
-  echo "Processed: $(basename "$file")"
-  echo "  Artist: $ARTIST_NAME"
-  echo "  Album: $album"
-  echo "  Title: $title"
-  [ -n "$track_num" ] && echo "  Track: $track_num"
-  echo "------------------------------------"
+	# Remove all existing tags
+	eyeD3 --remove-all "$file" >/dev/null 2>&1
+	
+	# Set new tags
+	eyeD3 \
+		--to-v2.3 \
+		--encoding=utf8 \
+		--artist="$artist_name" \
+		--album="$album" \
+		--title="$title" \
+		${track_num:+--track="$track_num"} \
+		"$file" >/dev/null 2>&1
+	
+	# Output info
+	echo "Processed: $(basename "$file")"
+	echo "	Artist: $artist_name"
+	echo "	Album: $album"
+	echo "	Title: $title"
+	[ -n "$track_num" ] && echo "	Track: $track_num"
+	echo "------------------------------------"
 }
 
-# Основной цикл обработки
-find "$TARGET_DIR" -type f \( -iname "*.mp3" -o -iname "*.MP3" -o -iname "*.mp4" -o -iname "*.MP4" \) -print0 | \
-while IFS= read -r -d $'\0' file; do
-  process_file "$file"
+# Main processing loop
+for artist_dir in "$TARGET_DIR"/*/; do
+	if [ -d "$artist_dir" ]; then
+		ARTIST_NAME=$(basename "$artist_dir")
+		echo "Processing artist: $ARTIST_NAME"
+		
+		find "$artist_dir" -type f \( -iname "*.mp3" -o -iname "*.MP3" -o -iname "*.mp4" -o -iname "*.MP4" \) -print0 | \
+		while IFS= read -r -d $'\0' file; do
+			process_file "$file" "$ARTIST_NAME"
+		done
+	fi
 done
 
-rm -rf ~/.config/cmus
-
 echo "Processing complete!"
-echo "cmus cache cleaned"
+
+if [[ -d ~/.config/cmus ]]; then
+	rm -rf ~/.config/cmus
+	echo "cmus cache cleaned"
+fi
