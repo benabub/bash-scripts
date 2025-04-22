@@ -12,6 +12,7 @@
 option=0
 manual_files=0
 manual_dirs=0
+dryrun=0
 
 # takes 1 arg: question string
 ask() {
@@ -24,17 +25,18 @@ ask() {
 }
 
 check_no_args() {
-	if [ -n "$1" ]; then
-		echo "The command in this mode requires no argument"
+	if { [ "$1" = "-n" ] || [ "$1" = "--dryrun" ]; } && [ -n "$2" ] || [ -n "$1" ] && [ "$1" != "-n" ] && [ "$1" != "--dryrun" ]; then
+		echo "The command in this mode requires no argument other than option '--dryrun' or '-n'"
 		return 1
 	fi
 	return 0
 }
 
+# check if any arg starts with hyphen
 check_no_more_opts() {
 	for i in "$@"; do
-		if [[ "$i" = -* ]]; then
-			echo "The command can take only one option"
+		if [[ "$i" = -* ]] && [[ "$i" != -n ]] && [[ "$i" != --dryrun ]]; then
+			echo "The command can take only one option other than '--dryrun' or '-n'"
 			return 1
 		fi
 	done
@@ -75,6 +77,7 @@ check_extension() {
 rename_str() {
 	local name="$1"
 	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
+		# shellcheck disable=SC2001
 		name=$(echo "$name" | sed 's/\([a-z]\)\([A-Z]\)/\1-\2/g')
 	fi
 	name="${name// /-}" # replace spaces with `-`
@@ -82,60 +85,90 @@ rename_str() {
 	echo "$name"
 }
 
-
 # overwriting builtin 'rename' command with a better variant
 # function to rename a file with checking if new name already exists, else renaiming with index
 # handle both arg and stdin
 # performs manual renaming of non-ASCII names if necessary
 rename() {
+
 	auto_rename() {
 		local path="$1"
 		local prefix="${path%/*}"
 		local name_old="${path##*/}"
 
 
-		echo "auto rename: >$path<"
-		echo "-----------------------"
+		if check_extension "$path" "$name_old"; then
+			local base_name="${name_old%.*}"
+			local extension="${name_old##*.}"
 
+			base_name_new="$(rename_str "$base_name")"
+			path_new="$prefix/$base_name_new.$extension"
 
-		# if check_extension "$path" "$name_old"; then
-		# 	local base_name="${name_old%.*}"
-		# 	local extension="${name_old##*.}"
-		#
-		# 	base_name_new="$(rename_str "$base_name")"
-		# 	path_new="$prefix/$base_name_new.$extension"
-		#
-		# 	# check if the new name already exists
-		# 	if [ -e "$path_new" ]; then
-		# 		# if exists, start appending index to find a unique name
-		# 		local index=1
-		# 		while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
-		# 			((index++))
-		# 		done
-		# 		# rename with the new unique name
-		# 		mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
-		# 	else
-		# 		# if does not exist, rename directly
-		# 		mv "$path" "$prefix/${base_name_new}.${extension}"
-		# 	fi
-		# else
-		# 	name_new="$(rename_str "$name_old")"
-		# 	path_new="$prefix/$name_new"
-		#
-		# 	# check if the new name already exists
-		# 	if [ -e "$path_new" ]; then
-		# 		# if exists, start appending index to find a unique name
-		# 		local index=1
-		# 		while [ -e "$prefix/${name_new}-${index}" ]; do
-		# 			((index++))
-		# 		done
-		# 		# rename with the new unique name
-		# 		mv "$path" "$prefix/${name_new}-${index}"
-		# 	else
-		# 		# if does not exist, rename directly
-		# 		mv "$path" "$prefix/${name_new}"
-		# 	fi
-		# fi
+			# check if the new name already exists
+			if [ -e "$path_new" ]; then
+				# if exists, start appending index to find a unique name
+				local index=1
+				while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
+					((index++))
+				done
+
+				# rename with the new unique name
+				if [ $dryrun -eq 1 ]; then
+					echo "-----------------------"
+					echo "auto-rename/extension/exist: >$path<"
+					echo "mv $path $prefix/${base_name_new}-${index}.${extension}"
+				else
+					mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+				fi
+
+			else
+
+				# if does not exist, rename directly
+				if [ $dryrun -eq 1 ]; then
+					echo "-----------------------"
+					echo "auto-rename/extension: >$path<"
+					echo "mv $path $prefix/${base_name_new}.${extension}"
+				else
+					mv "$path" "$prefix/${base_name_new}.${extension}"
+				fi
+
+			fi
+
+		else
+
+			name_new="$(rename_str "$name_old")"
+			path_new="$prefix/$name_new"
+
+			# check if the new name already exists
+			if [ -e "$path_new" ]; then
+				# if exists, start appending index to find a unique name
+				local index=1
+				while [ -e "$prefix/${name_new}-${index}" ]; do
+					((index++))
+				done
+
+				# rename with the new unique name
+				if [ $dryrun -eq 1 ]; then
+					echo "-----------------------"
+					echo "auto-rename/exist: >$path<"
+					echo "mv $path $prefix/${name_new}-${index}"
+				else
+					mv "$path" "$prefix/${name_new}-${index}"
+				fi
+
+			else
+
+				# if does not exist, rename directly
+				if [ $dryrun -eq 1 ]; then
+					echo "-----------------------"
+					echo "auto-rename: >$path<"
+					echo "mv $path $prefix/${name_new}"
+				else
+					mv "$path" "$prefix/${name_new}"
+				fi
+
+			fi
+		fi
 	}
 
 	manual_rename() {
@@ -150,71 +183,80 @@ rename() {
 			obj="[file]"
 		fi
 
-
 		echo "--------- Manual Renaming: 100% -------------"
-		echo "path >$path<"
-
 
 		if check_extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
 			local extension="${name_old##*.}"
 
-
-			echo "check_extension - true"
-
-
 			read -rp "$obj $base_name: " base_name_new </dev/tty
-
 
 			path_new="$prefix/$base_name_new.$extension"
 
-			echo "path_new >$path_new<"
-			echo "-----------------------"
+			# check if the new name already exists
+			if [ -e "$path_new" ]; then
+				# if exists, start appending index to find a unique name
+				local index=1
+				while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
+					((index++))
+				done
 
-			# # check if the new name already exists
-			# if [ -e "$path_new" ]; then
-			# 	# if exists, start appending index to find a unique name
-			# 	local index=1
-			# 	while [ -e "$prefix/${base_name_new}-${index}.${extension}" ]; do
-			# 		((index++))
-			# 	done
-			# 	# rename with the new unique name
-			# 	mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
-			# else
-			# 	# if does not exist, rename directly
-			# 	mv "$path" "$prefix/${base_name_new}.${extension}"
-			# fi
+				# rename with the new unique name
+				if [ $dryrun -eq 1 ]; then
+					echo "manual-rename/extension/exist: >$path<"
+					echo "mv $path $prefix/${base_name_new}-${index}.${extension}"
+				else
+					mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+				fi
+
+			else
+
+				# if does not exist, rename directly
+				if [ $dryrun -eq 1 ]; then
+					echo "manual-rename/extension: >$path<"
+					echo "mv $path $prefix/${base_name_new}.${extension}"
+				else
+					mv "$path" "$prefix/${base_name_new}.${extension}"
+				fi
+
+			fi
+
 		else
-
-
-			echo "check_extension - false"
-
 
 			read -rp "$obj $name_old: " name_new </dev/tty
 
-
 			path_new="$prefix/$name_new"
 
+			# check if the new name already exists
+			if [ -e "$path_new" ]; then
+				# if exists, start appending index to find a unique name
+				local index=1
+				while [ -e "$prefix/${name_new}-${index}" ]; do
+					((index++))
+				done
 
-			echo "path_new >$path_new<"
-			echo "-----------------------"
+				# rename with the new unique name
+				if [ $dryrun -eq 1 ]; then
+					echo "manual-rename/exist: >$path<"
+					echo "mv $path $prefix/${name_new}-${index}"
+				else
+					mv "$path" "$prefix/${name_new}-${index}"
+				fi
 
+			else
 
-			# # check if the new name already exists
-			# if [ -e "$path_new" ]; then
-			# 	# if exists, start appending index to find a unique name
-			# 	local index=1
-			# 	while [ -e "$prefix/${name_new}-${index}" ]; do
-			# 		((index++))
-			# 	done
-			# 	# rename with the new unique name
-			# 	mv "$path" "$prefix/${name_new}-${index}"
-			# else
-			# 	# if does not exist, rename directly
-			# 	mv "$path" "$prefix/${name_new}"
-			# fi
+				# if does not exist, rename directly
+				if [ $dryrun -eq 1 ]; then
+					echo "manual-rename: >$path<"
+					echo "mv $path $prefix/${name_new}"
+				else
+					mv "$path" "$prefix/${name_new}"
+				fi
+
+			fi
 		fi
 	}
+
 	# Function to process a single file path
 	single_path() {
 		local path="$1"
@@ -228,19 +270,14 @@ rename() {
 		if { [ $manual_files -eq 1 ] && [ -f "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; } || \
 			{ [ $manual_dirs -eq 1 ] && [ -d "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; }; then
 
-
-			echo "manual true"
-
-
 			manual_rename "$path"
 		else
 
-
-			echo "manual false"
-
 			auto_rename "$path"
+
 		fi
 	}
+
 	# Check if there are arguments; if yes, iterate over them
 	if [ "$#" -gt 0 ]; then
 		for path in "$@"; do
@@ -277,14 +314,16 @@ filter_paths() {
 
 rename_tree() {
 
-	rename_dirs_auto() { # rename all subdirs from depth to cwd
+	# rename all subdirs from depth to cwd
+	rename_dirs_auto() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
 	}
 
-	rename_files_auto() { # rename all regular files in a tree
+	# rename all regular files in a tree
+	rename_files_auto() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
@@ -326,18 +365,21 @@ filter_paths >> "$temp_file"
 		rename_files_auto
 		return
 	fi
+
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 		rename_dirs_manual
 		rename_files_auto
 		return
 	fi
+
 	# manual renaming files
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
 		rename_dirs_auto
 		rename_files_manual
 		return
 	fi
+
 	# manual renaming both (files + dirs)
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
 		rename_dirs_manual
@@ -400,6 +442,10 @@ exclude() {
 
 # TODO: add separator: var + option
 case "$1" in
+--dryrun | -n)
+	dryrun=1
+	shift
+	;;
 --exclude | -e)
 	option=1
 	;;
@@ -502,7 +548,6 @@ if [ $option -eq 3 ]; then
 	check_no_args "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
-	# TODO: action
 	rename_tree
 	
 	exit 0
@@ -516,7 +561,6 @@ if [ $option -eq 32 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
-	# TODO: action
 	only "$@"
 	
 	exit 0
@@ -530,7 +574,6 @@ if [ $option -eq 31 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
 
-	# TODO: action
 	exclude "$@"
 	
 	exit 0
@@ -543,7 +586,6 @@ if [ $option -eq 4 ]; then
 	check_no_args "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
-	# TODO: action
 	rename_tree
 	
 	exit 0
@@ -557,7 +599,6 @@ if [ $option -eq 42 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
-	# TODO: action
 	only "$@"
 	
 	exit 0
@@ -571,7 +612,6 @@ if [ $option -eq 41 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
 
-	# TODO: action
 	exclude "$@"
 	
 	exit 0
@@ -584,7 +624,6 @@ if [ $option -eq 5 ]; then
 	check_no_args "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
-	# TODO: action
 	rename_tree
 	
 	exit 0
@@ -598,7 +637,6 @@ if [ $option -eq 52 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
-	# TODO: action
 	only "$@"
 	
 	exit 0
@@ -612,7 +650,6 @@ if [ $option -eq 51 ]; then
 	check_subdir "$@" || exit 1
 	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
 
-	# TODO: action
 	exclude "$@"
 	
 	exit 0
