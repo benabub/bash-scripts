@@ -26,7 +26,7 @@ ask() {
 
 check_no_args() {
 	if { [ "$1" = "-n" ] || [ "$1" = "--dryrun" ]; } && [ -n "$2" ] || [ -n "$1" ] && [ "$1" != "-n" ] && [ "$1" != "--dryrun" ]; then
-		echo "The command in this mode requires no argument other than option '--dryrun' or '-n'"
+		echo "This command does not take any arguments in this mode."
 		return 1
 	fi
 	return 0
@@ -36,7 +36,7 @@ check_no_args() {
 check_no_more_opts() {
 	for i in "$@"; do
 		if [[ "$i" = -* ]] && [[ "$i" != -n ]] && [[ "$i" != --dryrun ]]; then
-			echo "The command can take only one option other than '--dryrun' or '-n'"
+			echo "This command does not support additional options in this mode."
 			return 1
 		fi
 	done
@@ -45,7 +45,7 @@ check_no_more_opts() {
 
 check_arg_presented() {
 	if [ -z "$1" ]; then
-		echo "The command in this mode requires one or more arguments"
+		echo "This command requires one or more arguments in this mode."
 		return 1
 	fi
 	return 0
@@ -54,7 +54,7 @@ check_arg_presented() {
 check_subdir() {
 	for d in "$@"; do
 		if [ ! -d "$(pwd)/$d" ]; then
-			echo "An arguments should be subdirectories of current working directory"
+			echo "Arguments must be subdirectories of the current working directory."
 			return 1
 		fi
 	done
@@ -441,58 +441,74 @@ exclude() {
 #######################
 
 # TODO: add separator: var + option
+
 case "$1" in
 --dryrun | -n)
 	dryrun=1
 	shift
 	;;
+esac
+
+case "$1" in
 --exclude | -e)
 	option=1
+	shift
 	;;
 --only | -o)
 	option=2
+	shift
 	;;
 --files | -f)
 	option=3
 	manual_files=1
+	shift
 	;;
 --excludefiles | -ef | -fe)
 	option=31
 	manual_files=1
+	shift
 	;;
 --onlyfiles | -of | -fo)
 	option=32
 	manual_files=1
+	shift
 	;;
 --dirs | -d)
 	option=4
 	manual_dirs=1
+	shift
 	;;
 --excludedirs | -ed | -de)
 	option=41
 	manual_dirs=1
+	shift
 	;;
 --onlydirs | -od | -do)
 	option=42
 	manual_dirs=1
+	shift
 	;;
 --both | -b)
 	option=5
 	manual_files=1
 	manual_dirs=1
+	shift
 	;;
 --excludeboth | -eb | -be)
 	option=51
 	manual_files=1
 	manual_dirs=1
+	shift
 	;;
 --onlyboth | -ob | -bo)
 	option=52
 	manual_files=1
 	manual_dirs=1
+	shift
 	;;
 --help | -h)
 	option=6
+	shift
 	;;
 --* | -*)
 	echo "Unknown option: $1"
@@ -508,7 +524,7 @@ esac
 if [ $option -eq 0 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)' (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)'? (y/n): " || exit 1
 
 	rename_tree
 
@@ -517,11 +533,10 @@ fi
 
 # only
 if [ $option -eq 2 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names (y/n?): " || exit 1
+	ask "Are you sure you want to rename all directory trees in the selected folders, including their names? (y/n): " || exit 1
 
 	only "$@"
 	
@@ -530,11 +545,10 @@ fi
 
 # exclude
 if [ $option -eq 1 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', excluding the selected folders and their contents? (y/n): " || exit 1
 
 	exclude "$@"
 	
@@ -543,10 +557,9 @@ fi
 
 # files
 if [ $option -eq 3 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each non-ASCII filename? (y/n): " || exit 1
 
 	rename_tree
 	
@@ -555,11 +568,10 @@ fi
 
 # only + files
 if [ $option -eq 32 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
+	ask "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
 
 	only "$@"
 	
@@ -568,11 +580,10 @@ fi
 
 # exclude + files
 if [ $option -eq 31 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content, with manual renaming of each regular file with non ASKII - name (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
 
 	exclude "$@"
 	
@@ -581,10 +592,9 @@ fi
 
 # dirs
 if [ $option -eq 4 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 
 	rename_tree
 	
@@ -593,11 +603,10 @@ fi
 
 # only + dirs
 if [ $option -eq 42 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
+	ask "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 
 	only "$@"
 	
@@ -606,11 +615,10 @@ fi
 
 # exclude + dirs
 if [ $option -eq 41 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content, with manual renaming of each directory with non ASKII - name (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 
 	exclude "$@"
 	
@@ -619,10 +627,9 @@ fi
 
 # both
 if [ $option -eq 5 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)' with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory and regular file containing non-ASCII characters in their names? (y/n): " || exit 1
 
 	rename_tree
 	
@@ -631,11 +638,10 @@ fi
 
 # only + both
 if [ $option -eq 52 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory trees of the chosen folders, including its names, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
+	ask "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
 
 	only "$@"
 	
@@ -644,11 +650,10 @@ fi
 
 # exclude + both
 if [ $option -eq 51 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are You sure to rename the whole directory tree under '$(pwd)', excluding the chosen folders and its content, with manual renaming of each directory and each regular file with non ASKII - names (y/n?): " || exit 1
+	ask "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
 
 	exclude "$@"
 	
@@ -657,7 +662,6 @@ fi
 
 # help
 if [ $option -eq 6 ]; then
-	shift # either "--option" will be $1
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
 
