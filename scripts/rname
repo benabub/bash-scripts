@@ -25,7 +25,7 @@ ask() {
 }
 
 check_no_args() {
-	if { [ "$1" = "-n" ] || [ "$1" = "--dryrun" ]; } && [ -n "$2" ] || [ -n "$1" ] && [ "$1" != "-n" ] && [ "$1" != "--dryrun" ]; then
+	if [ -n "$1" ]; then
 		echo "This command does not take any arguments in this mode."
 		return 1
 	fi
@@ -35,7 +35,11 @@ check_no_args() {
 # check if any arg starts with hyphen
 check_no_more_opts() {
 	for i in "$@"; do
-		if [[ "$i" = -* ]] && [[ "$i" != -n ]] && [[ "$i" != --dryrun ]]; then
+		if [[ "$i" = -n ]] || [[ "$i" = --dryrun ]]; then
+			echo "Please, use the --dryrun or -n option only at the beginning of the command."
+			return 1
+		fi
+		if [[ "$i" = -* ]]; then
 			echo "This command does not support additional options in this mode."
 			return 1
 		fi
