@@ -365,33 +365,52 @@ filter_paths >> "$temp_file"
 
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
-		rename_dirs_auto
 		rename_files_auto
+		rename_dirs_auto
 		return
 	fi
 
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
-		rename_dirs_manual
 		rename_files_auto
+		rename_dirs_manual
 		return
 	fi
 
 	# manual renaming files
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
-		rename_dirs_auto
 		rename_files_manual
+		rename_dirs_auto
 		return
 	fi
 
 	# manual renaming both (files + dirs)
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
-		rename_dirs_manual
 		rename_files_manual
+		rename_dirs_manual
 	fi
 }
 
 only() {
+
+	check_dir_name() {
+		local dir="$1"
+
+		# echo "dir - >$dir<"
+	#
+		local name="${dir##*/}"
+
+		# echo "name - >$name<"
+		
+		if [[ "$name" =~ [A-Z[:space:]] ]]; then
+			return 0
+		fi
+		if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; then
+			return 0
+		fi
+		return 1
+	}
+
 	local cwd=""
 	cwd=$(pwd)
 	for dir in "$@"; do
@@ -400,7 +419,10 @@ only() {
 
 		if cd "$dir"; then
 			rename_tree
-			cd "$cwd" && rename "$dir" || echo "Failed to rename '$dir'"
+			cd "$cwd" || { echo "Failed to change directory to '$cwd'"; exit 1; }
+			if check_dir_name "$dir"; then
+				rename "$dir" || echo "Failed to rename '$dir'"
+			fi
 		else
 			echo "Failed to change directory to '$dir'"
 		fi
