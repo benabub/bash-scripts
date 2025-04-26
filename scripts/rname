@@ -395,13 +395,7 @@ only() {
 
 	check_dir_name() {
 		local dir="$1"
-
-		# echo "dir - >$dir<"
-	#
 		local name="${dir##*/}"
-
-		# echo "name - >$name<"
-		
 		if [[ "$name" =~ [A-Z[:space:]] ]]; then
 			return 0
 		fi
@@ -443,23 +437,68 @@ exclude() {
 		exclude_dirs+="-o -path '$pattern' "
 	done
 
+	rename_files_auto() {
+	str_files="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_files | rename"
+	}
+
+	rename_dirs_auto() {
+	str_dirs="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_dirs | sort_by_slashes | rename"
+	}
+
+	rename_files_manual() {
 	str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_files | rename"
+	}
 
+	rename_dirs_manual() {
 	str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_dirs | sort_by_slashes | rename"
-}
+	}
 
-#######################
-# tests area
-#######################
+	# no manual
+	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
+		rename_files_auto
+		rename_dirs_auto
+		return
+	fi
+
+	# manual renaming dirs
+	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
+		rename_files_auto
+		rename_dirs_manual
+		return
+	fi
+
+	# manual renaming files
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
+		rename_files_manual
+		rename_dirs_auto
+		return
+	fi
+
+	# manual renaming both (files + dirs)
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
+		rename_files_manual
+		rename_dirs_manual
+	fi
+
+}
 
 
 #######################
