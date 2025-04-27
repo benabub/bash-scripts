@@ -17,11 +17,12 @@ dryrun=0
 # takes 1 arg: question string
 ask() {
 	read -rp "$1" answer
-	if ! [ "$answer" == "y" ] || [ "$answer" == "yes" ] || [ "$answer" == "Y" ] || [ "$answer" == "YES" ]; then
+	if [[ "$answer" =~ ^(y|yes|Y|YES)$ ]]; then
+		return 0
+	else
 		echo "----------------- cancelled -----------------"
 		return 1
 	fi
-	return 0
 }
 
 check_no_args() {
@@ -122,7 +123,9 @@ rename() {
 					echo "auto-rename/extension/exist: >$path<"
 					echo "mv $path $prefix/${base_name_new}-${index}.${extension}"
 				else
-					mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+					if ! mv "$path" "$prefix/${base_name_new}-${index}.${extension}"; then
+						echo "Error renaming $path to $prefix/${base_name_new}-${index}.${extension}" >&2
+					fi
 				fi
 
 			else
@@ -133,7 +136,9 @@ rename() {
 					echo "auto-rename/extension: >$path<"
 					echo "mv $path $prefix/${base_name_new}.${extension}"
 				else
-					mv "$path" "$prefix/${base_name_new}.${extension}"
+					if ! mv "$path" "$prefix/${base_name_new}.${extension}"; then
+						echo "Error renaming $path to $prefix/${base_name_new}.${extension}" >&2
+					fi
 				fi
 
 			fi
@@ -157,7 +162,9 @@ rename() {
 					echo "auto-rename/exist: >$path<"
 					echo "mv $path $prefix/${name_new}-${index}"
 				else
-					mv "$path" "$prefix/${name_new}-${index}"
+					if ! mv "$path" "$prefix/${name_new}-${index}"; then
+						echo "Error renaming $path to $prefix/${name_new}-${index}" >&2
+					fi
 				fi
 
 			else
@@ -168,7 +175,9 @@ rename() {
 					echo "auto-rename: >$path<"
 					echo "mv $path $prefix/${name_new}"
 				else
-					mv "$path" "$prefix/${name_new}"
+					if ! mv "$path" "$prefix/${name_new}"; then
+						echo "Error renaming $path to $prefix/${name_new}" >&2
+					fi
 				fi
 
 			fi
@@ -210,7 +219,9 @@ rename() {
 					echo "manual-rename/extension/exist: >$path<"
 					echo "mv $path $prefix/${base_name_new}-${index}.${extension}"
 				else
-					mv "$path" "$prefix/${base_name_new}-${index}.${extension}"
+					if ! mv "$path" "$prefix/${base_name_new}-${index}.${extension}"; then
+						echo "Error renaming $path to $prefix/${base_name_new}-${index}.${extension}" >&2
+					fi
 				fi
 
 			else
@@ -220,7 +231,9 @@ rename() {
 					echo "manual-rename/extension: >$path<"
 					echo "mv $path $prefix/${base_name_new}.${extension}"
 				else
-					mv "$path" "$prefix/${base_name_new}.${extension}"
+					if ! mv "$path" "$prefix/${base_name_new}.${extension}"; then
+						echo "Error renaming $path to $prefix/${base_name_new}.${extension}" >&2
+					fi
 				fi
 
 			fi
@@ -244,7 +257,9 @@ rename() {
 					echo "manual-rename/exist: >$path<"
 					echo "mv $path $prefix/${name_new}-${index}"
 				else
-					mv "$path" "$prefix/${name_new}-${index}"
+					if ! mv "$path" "$prefix/${name_new}-${index}"; then
+						echo "Error renaming $path to $prefix/${name_new}-${index}" >&2
+					fi
 				fi
 
 			else
@@ -254,7 +269,9 @@ rename() {
 					echo "manual-rename: >$path<"
 					echo "mv $path $prefix/${name_new}"
 				else
-					mv "$path" "$prefix/${name_new}"
+					if ! mv "$path" "$prefix/${name_new}"; then
+						echo "Error renaming $path to $prefix/${name_new}" >&2
+					fi
 				fi
 
 			fi
