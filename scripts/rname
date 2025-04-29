@@ -12,6 +12,8 @@
 option=0
 manual_files=0
 manual_dirs=0
+manual_total=0
+manual_current=0
 dryrun=0
 
 # takes 1 arg: question string
@@ -196,7 +198,9 @@ rename() {
 			obj="[file]"
 		fi
 
-		echo "--------- Manual Renaming: 100% -------------"
+		percentage=$(( (manual_current * 100) / manual_total ))
+		echo "--------- Manual Renaming: $percentage% -------------"
+		((manual_current++))
 
 		if check_extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
@@ -323,11 +327,22 @@ sort_by_slashes() {
 }
 
 # filter paths in pipelines by RE conditions in basename
-filter_paths() {
+filter_paths_all() {
 	while IFS= read -r path; do
 		local name=""
 		name=$(basename "$path")
 		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]"; then
+			echo "$path"
+		fi
+	done
+}
+
+# filter paths in pipelines by RE conditions in basename
+filter_paths_manual() {
+	while IFS= read -r path; do
+		local name=""
+		name=$(basename "$path")
+		if echo "$name" | grep -qP "[^\x00-\x7F]"; then
 			echo "$path"
 		fi
 	done
@@ -359,11 +374,19 @@ rename_tree() {
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths | sort_by_slashes >> "$temp_file"
+filter_paths_all | sort_by_slashes >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
 		done < "$temp_file"
+	}
+
+	count_dirs_manual() {
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+filter_paths_manual | wc -l
 	}
 
 	rename_files_manual() {
@@ -373,11 +396,19 @@ filter_paths | sort_by_slashes >> "$temp_file"
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths >> "$temp_file"
+filter_paths_all >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
 		done < "$temp_file"
+	}
+
+	count_files_manual() {
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+filter_paths_manual | wc -l
 	}
 
 	# no manual
@@ -389,6 +420,7 @@ filter_paths >> "$temp_file"
 
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
+		manual_total=$(count_dirs_manual)
 		rename_files_auto
 		rename_dirs_manual
 		return
@@ -396,6 +428,7 @@ filter_paths >> "$temp_file"
 
 	# manual renaming files
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
+		manual_total=$(count_files_manual)
 		rename_files_manual
 		rename_dirs_auto
 		return
@@ -403,6 +436,7 @@ filter_paths >> "$temp_file"
 
 	# manual renaming both (files + dirs)
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
+		manual_total=$(( $(count_files_manual) + $(count_dirs_manual) ))
 		rename_files_manual
 		rename_dirs_manual
 	fi
@@ -497,6 +531,7 @@ exclude() {
 
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
+		# manual_total=$(find_dirs_manual | wc -l)
 		rename_files_auto
 		rename_dirs_manual
 		return
@@ -504,6 +539,7 @@ exclude() {
 
 	# manual renaming files
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
+		# manual_total=$(find_files_manual | wc -l)
 		rename_files_manual
 		rename_dirs_auto
 		return
@@ -511,6 +547,7 @@ exclude() {
 
 	# manual renaming both (files + dirs)
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
+		# manual_total=$(( $(find_files_manual | wc -l) + $(find_dirs_manual | wc -l) ))
 		rename_files_manual
 		rename_dirs_manual
 	fi
