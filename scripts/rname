@@ -354,7 +354,7 @@ sort_by_slashes() {
 }
 
 # filter paths in pipelines by RE conditions in basename
-filter_paths_all() {
+filter_paths_manual_all() {
 	while IFS= read -r path; do
 		local name=""
 		name=$(basename "$path")
@@ -365,7 +365,7 @@ filter_paths_all() {
 }
 
 # filter paths in pipelines by RE conditions in basename
-filter_paths_manual() {
+filter_paths_manual_only() {
 	while IFS= read -r path; do
 		local name=""
 		name=$(basename "$path")
@@ -401,7 +401,7 @@ rename_tree() {
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths_all >> "$temp_file"
+filter_paths_manual_all >> "$temp_file"
 		while IFS= read -r line; do
 			rename "$line"
 		done < "$temp_file"
@@ -414,7 +414,7 @@ filter_paths_all >> "$temp_file"
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths_all | sort_by_slashes >> "$temp_file"
+filter_paths_manual_all | sort_by_slashes >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
@@ -426,7 +426,7 @@ filter_paths_all | sort_by_slashes >> "$temp_file"
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths_manual | wc -l
+filter_paths_manual_only | wc -l
 	}
 
 	count_dirs_manual() {
@@ -434,7 +434,7 @@ filter_paths_manual | wc -l
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths_manual | wc -l
+filter_paths_manual_only | wc -l
 	}
 
 	# no manual
@@ -543,7 +543,7 @@ exclude() {
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files" | filter_paths_all  >> "$temp_file"
+		eval "$str_files" | filter_paths_manual_all  >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
@@ -559,7 +559,7 @@ exclude() {
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | filter_paths_all | sort_by_slashes >> "$temp_file"
+		eval "$str_dirs" | filter_paths_manual_all | sort_by_slashes >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
@@ -573,7 +573,7 @@ exclude() {
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '*[! -~]*' \) \
 -print"
-		eval "$str_files" | filter_paths_manual | wc -l
+		eval "$str_files" | filter_paths_manual_only | wc -l
 	}
 
 	count_dirs_manual() {
@@ -582,7 +582,7 @@ exclude() {
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
 -o -type d \( -name '*[! -~]*' \) \
 -print"
-		eval "$str_dirs" | filter_paths_manual | wc -l
+		eval "$str_dirs" | filter_paths_manual_only | wc -l
 	}
 
 	# no manual
@@ -620,8 +620,6 @@ exclude() {
 #######################
 # parsing the command
 #######################
-
-# TODO: add separator: var + option
 
 case "$1" in
 --dryrun | -n)
