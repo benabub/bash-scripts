@@ -16,6 +16,7 @@ manual_total=0
 manual_current=0
 dryrun=0
 sep="_"
+anti_sep="-"
 
 # takes 1 arg: question string
 ask_confirm() {
@@ -37,6 +38,7 @@ ask_sep() {
 	if [[ "$answer" =~ ^[1-2]$ || -z "$answer" ]]; then
 		if [ "$answer" = 2 ]; then
 			sep="-"
+			anti_sep="_"
 		fi
 	else
 		echo "Unknown separator: $answer"
@@ -356,7 +358,7 @@ filter_paths_all() {
 	while IFS= read -r path; do
 		local name=""
 		name=$(basename "$path")
-		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]"; then
+		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]|$anti_sep"; then
 			echo "$path"
 		fi
 	done
@@ -380,7 +382,7 @@ rename_tree() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' -o -name "*$anti_sep*" \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
 	}
 
@@ -388,7 +390,7 @@ rename_tree() {
 	rename_dirs_auto() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name "*$anti_sep*" \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
 	}
 
@@ -518,7 +520,7 @@ exclude() {
 		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | rename
 	}
@@ -527,7 +529,7 @@ exclude() {
 		local str_dirs
 		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | sort_by_slashes | rename
 	}
@@ -540,9 +542,8 @@ exclude() {
 		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files"  >> "$temp_file"
+		eval "$str_files" | filter_paths_all  >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
@@ -556,9 +557,9 @@ exclude() {
 		local str_dirs
 		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
+-o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | sort_by_slashes >> "$temp_file"
+		eval "$str_dirs" | filter_paths_all | sort_by_slashes >> "$temp_file"
 
 		while IFS= read -r line; do
 			rename "$line"
