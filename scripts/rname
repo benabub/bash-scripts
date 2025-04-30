@@ -15,14 +15,31 @@ manual_dirs=0
 manual_total=0
 manual_current=0
 dryrun=0
+sep="_"
 
 # takes 1 arg: question string
-ask() {
+ask_confirm() {
 	read -rp "$1" answer
 	if [[ "$answer" =~ ^(y|yes|Y|YES)$ ]]; then
 		return 0
 	else
 		echo "----------------- cancelled -----------------"
+		return 1
+	fi
+}
+
+# ask for separator: `_` (1) or `-` (2), Empty - default
+ask_sep() {
+	echo "Please, choose the separator, default: {_}:"
+	echo "(1): {_} ('Bla Bla' -> 'bla_bla')"
+	echo "(2): {-} ('Bla Bla' -> 'bla-bla')"
+	read -rp "Enter your choice (1|2|<Enter>): " answer
+	if [[ "$answer" =~ ^[1-2]$ || -z "$answer" ]]; then
+		if [ "$answer" = 2 ]; then
+			sep="-"
+		fi
+	else
+		echo "Unknown separator: $answer"
 		return 1
 	fi
 }
@@ -85,10 +102,16 @@ rename_str() {
 	local name="$1"
 	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
 		# shellcheck disable=SC2001
-		name=$(echo "$name" | sed 's/\([a-z]\)\([A-Z]\)/\1-\2/g')
+		name=$(echo "$name" | sed "s/\([a-z]\)\([A-Z]\)/\1'$sep'\2/g")
 	fi
-	name="${name// /-}" # replace spaces with `-`
+	name="${name// /$sep}" # replace spaces with sep
 	name="${name,,}" # lowercase
+	if [ $sep = "-" ]; then
+		name="${name//_/$sep}" # replace underscores with sep
+	fi
+	if [ $sep = "_" ]; then
+		name="${name//-/$sep}" # replace hyphens with sep
+	fi
 	echo "$name"
 }
 
@@ -352,21 +375,34 @@ filter_paths_manual() {
 
 rename_tree() {
 
-	# rename all subdirs from depth to cwd
-	rename_dirs_auto() {
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
-	}
-
 	# rename all regular files in a tree
 	rename_files_auto() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
+	}
+
+	# rename all subdirs from depth to cwd
+	rename_dirs_auto() {
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
+	}
+
+	rename_files_manual() {
+		local temp_file
+		temp_file=$(mktemp)
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+filter_paths_all >> "$temp_file"
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
 	}
 
 	rename_dirs_manual() {
@@ -383,32 +419,18 @@ filter_paths_all | sort_by_slashes >> "$temp_file"
 		done < "$temp_file"
 	}
 
-	count_dirs_manual() {
-	find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths_manual | wc -l
-	}
-
-	rename_files_manual() {
-		local temp_file
-		temp_file=$(mktemp)
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-filter_paths_all >> "$temp_file"
-
-		while IFS= read -r line; do
-			rename "$line"
-		done < "$temp_file"
-	}
-
 	count_files_manual() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+filter_paths_manual | wc -l
+	}
+
+	count_dirs_manual() {
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 filter_paths_manual | wc -l
 	}
@@ -449,10 +471,11 @@ only() {
 	check_dir_name() {
 		local dir="$1"
 		local name="${dir##*/}"
-		if [[ "$name" =~ [A-Z[:space:]] ]]; then
+		if [[ "$name" =~ [A-Z[:space:]_-] ]]; then
 			return 0
 		fi
-		if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; then
+		# if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; then
+		if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9] ]]; then
 			return 0
 		fi
 		return 1
@@ -495,7 +518,7 @@ exclude() {
 		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' \) \
+-a \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | rename
 	}
@@ -504,7 +527,7 @@ exclude() {
 		local str_dirs
 		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
+-o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*-*' -o -name '*_*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | sort_by_slashes | rename
 	}
@@ -526,16 +549,6 @@ exclude() {
 		done < "$temp_file"
 	}
 
-	count_files_manual() {
-		local str_files
-		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '*[! -~]*' \) \
--print"
-		eval "$str_files" | filter_paths_manual | wc -l
-	}
-
 	rename_dirs_manual() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -550,6 +563,16 @@ exclude() {
 		while IFS= read -r line; do
 			rename "$line"
 		done < "$temp_file"
+	}
+
+	count_files_manual() {
+		local str_files
+		str_files="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '*[! -~]*' \) \
+-print"
+		eval "$str_files" | filter_paths_manual | wc -l
 	}
 
 	count_dirs_manual() {
@@ -592,7 +615,6 @@ exclude() {
 	fi
 
 }
-
 
 #######################
 # parsing the command
@@ -682,7 +704,8 @@ esac
 if [ $option -eq 0 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)'? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)'? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	rename_tree
 
@@ -694,7 +717,8 @@ if [ $option -eq 2 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename all directory trees in the selected folders, including their names? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename all directory trees in the selected folders, including their names? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	only "$@"
 	
@@ -706,7 +730,8 @@ if [ $option -eq 1 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', excluding the selected folders and their contents? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', excluding the selected folders and their contents? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	exclude "$@"
 	
@@ -717,7 +742,8 @@ fi
 if [ $option -eq 3 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each non-ASCII filename? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each non-ASCII filename? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	rename_tree
 	
@@ -729,7 +755,8 @@ if [ $option -eq 32 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	only "$@"
 	
@@ -741,7 +768,8 @@ if [ $option -eq 31 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	exclude "$@"
 	
@@ -752,7 +780,8 @@ fi
 if [ $option -eq 4 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	rename_tree
 	
@@ -764,7 +793,8 @@ if [ $option -eq 42 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	only "$@"
 	
@@ -776,7 +806,8 @@ if [ $option -eq 41 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	exclude "$@"
 	
@@ -787,7 +818,8 @@ fi
 if [ $option -eq 5 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_no_args "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory and regular file containing non-ASCII characters in their names? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory and regular file containing non-ASCII characters in their names? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	rename_tree
 	
@@ -799,7 +831,8 @@ if [ $option -eq 52 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	only "$@"
 	
@@ -811,7 +844,8 @@ if [ $option -eq 51 ]; then
 	check_no_more_opts "$@" || exit 1
 	check_arg_presented "$@" || exit 1
 	check_subdir "$@" || exit 1
-	ask "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
+	ask_confirm "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
+	ask_sep || exit 1
 
 	exclude "$@"
 	
