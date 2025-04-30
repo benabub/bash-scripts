@@ -198,8 +198,10 @@ rename() {
 			obj="[file]"
 		fi
 
-		percentage=$(( (manual_current * 100) / manual_total ))
-		echo "--------- Manual Renaming: $percentage% -------------"
+		if [ "$manual_total" -ne 0 ]; then
+			percentage=$(( (manual_current * 100) / manual_total ))
+			echo "--------- Manual Renaming: $percentage% -------------"
+		fi
 		((manual_current++))
 
 		if check_extension "$path" "$name_old"; then
@@ -489,37 +491,74 @@ exclude() {
 	done
 
 	rename_files_auto() {
-	str_files="find . \
+		local str_files
+		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[A-Z]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-	eval "$str_files | rename"
+		eval "$str_files" | rename
 	}
 
 	rename_dirs_auto() {
-	str_dirs="find . \
+		local str_dirs
+		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type d \( -name '* *' -o -name '*[A-Z]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-	eval "$str_dirs | sort_by_slashes | rename"
+		eval "$str_dirs" | sort_by_slashes | rename
 	}
 
 	rename_files_manual() {
-	str_files="find . \
+		local temp_file
+		temp_file=$(mktemp)
+
+		local str_files
+		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-	eval "$str_files | rename"
+		eval "$str_files"  >> "$temp_file"
+
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
+	}
+
+	count_files_manual() {
+		local str_files
+		str_files="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '*[! -~]*' \) \
+-print"
+		eval "$str_files" | filter_paths_manual | wc -l
 	}
 
 	rename_dirs_manual() {
-	str_dirs="find . \
+		local temp_file
+		temp_file=$(mktemp)
+
+		local str_dirs
+		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*[! -~]*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-	eval "$str_dirs | sort_by_slashes | rename"
+		eval "$str_dirs" | sort_by_slashes >> "$temp_file"
+
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
+	}
+
+	count_dirs_manual() {
+		local str_dirs
+		str_dirs="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
+-o -type d \( -name '*[! -~]*' \) \
+-print"
+		eval "$str_dirs" | filter_paths_manual | wc -l
 	}
 
 	# no manual
@@ -531,7 +570,7 @@ exclude() {
 
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
-		# manual_total=$(find_dirs_manual | wc -l)
+		manual_total=$(count_dirs_manual)
 		rename_files_auto
 		rename_dirs_manual
 		return
@@ -539,7 +578,7 @@ exclude() {
 
 	# manual renaming files
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
-		# manual_total=$(find_files_manual | wc -l)
+		manual_total=$(count_files_manual)
 		rename_files_manual
 		rename_dirs_auto
 		return
@@ -547,7 +586,7 @@ exclude() {
 
 	# manual renaming both (files + dirs)
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
-		# manual_total=$(( $(find_files_manual | wc -l) + $(find_dirs_manual | wc -l) ))
+		manual_total=$(( $(count_files_manual) + $(count_dirs_manual) ))
 		rename_files_manual
 		rename_dirs_manual
 	fi
