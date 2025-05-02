@@ -397,11 +397,15 @@ rename_tree() {
 	rename_files_manual() {
 		local temp_file
 		temp_file=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file"' EXIT
+
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 filter_paths_manual_all >> "$temp_file"
+
 		while IFS= read -r line; do
 			rename "$line"
 		done < "$temp_file"
@@ -410,6 +414,9 @@ filter_paths_manual_all >> "$temp_file"
 	rename_dirs_manual() {
 		local temp_file
 		temp_file=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file"' EXIT
+
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \
@@ -537,6 +544,8 @@ exclude() {
 	rename_files_manual() {
 		local temp_file
 		temp_file=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file"' EXIT
 
 		local str_files
 		str_files="find . \
@@ -553,6 +562,8 @@ exclude() {
 	rename_dirs_manual() {
 		local temp_file
 		temp_file=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file"' EXIT
 
 		local str_dirs
 		str_dirs="find . \
