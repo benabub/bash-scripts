@@ -6,7 +6,7 @@
 # as options: exclude || add dirs to rename
 
 #######################
-# vars & functions
+# vars
 #######################
 
 option=0
@@ -18,34 +18,73 @@ dryrun=0
 sep="_"
 anti_sep="-"
 
-# Display help information
+#######################
+# functions
+#######################
+
 show_help() {
     cat <<EOF
-Usage: $(basename "$0") [OPTIONS] [ARGS]
+USAGE:
+    $(basename "$0") [--dryrun | -n] [OPTION] [DIRS...]
 
-Options:
-  --dryrun, -n          Perform a dry run without making actual changes.
-  --exclude, -e         Exclude specified directories from renaming.
-  --only, -o            Rename only specified directories and their contents.
-  --files, -f           Rename files with manual confirmation for non-ASCII names.
-  --dirs, -d            Rename directories with manual confirmation for non-ASCII names.
-  --both, -b            Rename both files and directories with manual confirmation for non-ASCII names.
-  --help, -h            Show this help message and exit.
+OPTIONS:
+    --dryrun, -n
+        Perform a dry run without making actual changes.
+        This option must be specified first if used.
 
-Advanced Options:
-  --excludefiles, -ef   Exclude specific files from renaming.
-  --excludedirs, -ed    Exclude specific directories from renaming.
-  --excludeboth, -eb    Exclude both files and directories from renaming.
-  --onlyfiles, -of      Rename only files in specified directories.
-  --onlydirs, -od       Rename only directories in specified directories.
-  --onlyboth, -ob       Rename both files and directories in specified directories.
+    [no more options]
+        Rename the entire directory tree under the current working directory (cwd).
 
-Examples:
-  $(basename "$0") --dryrun
-  $(basename "$0") --exclude ./dir1 ./dir2
-  $(basename "$0") --only ./dir1
-  $(basename "$0") --files
-  $(basename "$0") --dirs
+    --only, -o
+        Rename all directory trees in the selected folders, including their names.
+
+    --exclude, -e
+        Rename the entire directory tree under the current working directory (cwd),
+        excluding the selected folders and their contents.
+
+    --files, -f
+        Rename the entire directory tree under the current working directory (cwd),
+        with manual renaming required for each non-ASCII filename.
+
+    --onlyfiles, -of
+        Rename all directory trees in the selected folders (including their names),
+        with manual renaming required for each regular file containing non-ASCII characters.
+
+    --excludefiles, -ef
+        Rename the entire directory tree under the current working directory (cwd),
+        excluding selected folders and their contents, with manual renaming required
+        for each regular file containing non-ASCII characters.
+
+    --dirs, -d
+        Rename the entire directory tree under the current working directory (cwd),
+        with manual renaming required for each directory containing non-ASCII characters
+        in its name.
+
+    --onlydirs, -od
+        Rename the entire directory tree under the current working directory (cwd),
+        excluding selected folders and their contents, with manual renaming required
+        for each directory containing non-ASCII characters in its name.
+
+    --excludedirs, -ed
+        Rename the entire directory tree under the current working directory (cwd),
+        excluding selected folders and their contents, with manual renaming required
+        for each directory containing non-ASCII characters in its name.
+
+    --both, -b
+        Manually rename both files and directories with non-ASCII characters in their names.
+
+    --onlyboth, -ob
+        Rename all directory trees in the selected folders (including their names),
+        with manual renaming required for each directory and file containing non-ASCII
+        characters in their names.
+
+    --excludeboth, -eb
+        Rename the entire directory tree under the current working directory (cwd),
+        excluding selected folders and their contents, with manual renaming required
+        for each directory and file containing non-ASCII characters in their names.
+
+    --help, -h
+        Show this help message.
 
 EOF
 }
