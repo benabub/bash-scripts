@@ -24,6 +24,7 @@ anti_sep="-"
 
 show_help() {
     cat <<EOF
+
 USAGE:
     $(basename "$0") [--dryrun | -n] [OPTION] [DIRS...]
 
@@ -173,6 +174,15 @@ check_extension() {
 # takes 1 arg: old_str; echo new_str
 rename_str() {
 	local name="$1"
+
+	# Remove all prefixes and suffixes of '-', '_', and ' '
+	while [[ "$name" =~ ^[-_[:space:]] ]]; do
+		name="${name#[-_ ]}"
+	done
+	while [[ "$name" =~ [-_[:space:]]$ ]]; do
+		name="${name%[-_ ]}"
+	done
+
 	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
 		# shellcheck disable=SC2001
 		name=$(echo "$name" | sed "s/\([a-z]\)\([A-Z]\)/\1'$sep'\2/g")
