@@ -211,6 +211,11 @@ rename() {
 		local prefix="${path%/*}"
 		local name_old="${path##*/}"
 
+		# Progress bar
+		if [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
+			((auto_current++))
+			printf "\rProgress: [%-50s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 50 / auto_total))))" $((auto_current * 100 / auto_total))
+		fi
 
 		if check_extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
