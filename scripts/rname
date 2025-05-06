@@ -47,11 +47,11 @@ OPTIONS:
         Rename the entire directory tree under the current working directory (cwd),
         with manual renaming required for each non-ASCII filename.
 
-    --onlyfiles, -of
+    --onlyfiles, -of, -fo
         Rename all directory trees in the selected folders (including their names),
         with manual renaming required for each regular file containing non-ASCII characters.
 
-    --excludefiles, -ef
+    --excludefiles, -ef, -fe
         Rename the entire directory tree under the current working directory (cwd),
         excluding selected folders and their contents, with manual renaming required
         for each regular file containing non-ASCII characters.
@@ -61,12 +61,12 @@ OPTIONS:
         with manual renaming required for each directory containing non-ASCII characters
         in its name.
 
-    --onlydirs, -od
+    --onlydirs, -od, -do
         Rename the entire directory tree under the current working directory (cwd),
         excluding selected folders and their contents, with manual renaming required
         for each directory containing non-ASCII characters in its name.
 
-    --excludedirs, -ed
+    --excludedirs, -ed, -de
         Rename the entire directory tree under the current working directory (cwd),
         excluding selected folders and their contents, with manual renaming required
         for each directory containing non-ASCII characters in its name.
@@ -74,12 +74,12 @@ OPTIONS:
     --both, -b
         Manually rename both files and directories with non-ASCII characters in their names.
 
-    --onlyboth, -ob
+    --onlyboth, -ob, -bo
         Rename all directory trees in the selected folders (including their names),
         with manual renaming required for each directory and file containing non-ASCII
         characters in their names.
 
-    --excludeboth, -eb
+    --excludeboth, -eb, -be
         Rename the entire directory tree under the current working directory (cwd),
         excluding selected folders and their contents, with manual renaming required
         for each directory and file containing non-ASCII characters in their names.
