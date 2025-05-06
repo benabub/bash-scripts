@@ -12,8 +12,10 @@
 option=0
 manual_files=0
 manual_dirs=0
-manual_total=0
+declare -i manual_total
 manual_current=0
+declare -i auto_total
+auto_current=0
 dryrun=0
 sep="_"
 anti_sep="-"
@@ -509,6 +511,21 @@ filter_paths_manual_all | sort_by_slashes >> "$temp_file"
 		done < "$temp_file"
 	}
 
+	count_files_auto() {
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | wc -l
+	}
+
+	count_dirs_auto() {
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | wc -l
+	}
+
 	count_files_manual() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
@@ -527,6 +544,10 @@ filter_paths_manual_only | wc -l
 
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
+		auto_total=$(( $(count_files_auto) + $(count_dirs_auto) ))
+
+		echo "auto total ${auto_total}"
+
 		rename_files_auto
 		rename_dirs_auto
 		return
