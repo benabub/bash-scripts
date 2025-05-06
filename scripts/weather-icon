@@ -17,7 +17,7 @@ def get_weather_icon():
         city = os.environ.get('OWM_CITY')
 
         if not api_key or not city:
-            raise ValueError("Проверьте OWM_API_KEY и OWM_CITY в .zshrc")
+            raise ValueError("Check OWM_API_KEY and OWM_CITY in .zshrc")
 
         url = (
             "http://api.openweathermap.org/data/2.5/"

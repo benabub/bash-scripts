@@ -463,7 +463,7 @@ rename_tree() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' -o -name "*$anti_sep*" \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
 	}
 
@@ -471,7 +471,7 @@ rename_tree() {
 	rename_dirs_auto() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name "*$anti_sep*" \) \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
 	}
 
@@ -564,7 +564,6 @@ only() {
 		if [[ "$name" =~ [A-Z[:space:]_-] ]]; then
 			return 0
 		fi
-		# if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; then
 		if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9] ]]; then
 			return 0
 		fi
@@ -608,7 +607,7 @@ exclude() {
 		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[A-Z]*' -o -name '*$anti_sep*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | rename
 	}
@@ -617,7 +616,7 @@ exclude() {
 		local str_dirs
 		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
--o -type d \( -name '* *' -o -name '*[A-Z]*' -o -name '*$anti_sep*' \) \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | sort_by_slashes | rename
 	}
