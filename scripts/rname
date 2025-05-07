@@ -120,7 +120,6 @@ ask_sep() {
 		echo "Unknown separator: $answer"
 		return 1
 	fi
-	echo "-----------------------"
 }
 
 check_no_args() {
@@ -569,6 +568,7 @@ filter_paths_manual_only | wc -l
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
 
+		echo "-----------------------"
 		echo "Renaming tree: '$(pwd)'"
 
 		show_thinking_animation &
@@ -750,6 +750,7 @@ exclude() {
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
 
+		echo "-----------------------"
 		echo "Renaming tree: '$(pwd)' excluding dirs: $exclude_dirs_massage"
 
 		show_thinking_animation &
