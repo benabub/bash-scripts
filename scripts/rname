@@ -231,7 +231,8 @@ rename() {
 		# Progress bar
 		if [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
 			((auto_current++))
-			printf "\rProgress: [%-50s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 50 / auto_total))))" $((auto_current * 100 / auto_total))
+			printf "\rRenaming Progress: [%-50s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 50 / auto_total))))" $((auto_current * 100 / auto_total))
+			[ $auto_current -eq $auto_total ] && printf "\n"
 		fi
 
 		if check_extension "$path" "$name_old"; then
@@ -570,7 +571,7 @@ filter_paths_manual_only | wc -l
 		animation_pid=$!
 		auto_total=$(( $(count_files_auto) + $(count_dirs_auto) ))
 		kill $animation_pid 2>/dev/null
-		echo "complete."
+		echo "completed."
 
 		rename_files_auto
 		rename_dirs_auto
