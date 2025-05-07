@@ -233,9 +233,6 @@ rename() {
 		if [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
 			((auto_current++))
 
-			echo "auto_total: $auto_total"
-			echo "auto_current: $auto_current"
-			
 			if [ $auto_current -eq $auto_total ]; then
 				printf "\r\033[KRenaming Progress: [%-40s] 100%%\n" "$(printf '#%.0s' $(seq 1 40))"
 			else
@@ -494,19 +491,37 @@ rename_tree() {
 
 	# rename all regular files in a tree
 	rename_files_auto() {
+		local temp_file
+		temp_file=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file"' EXIT
+
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | rename
+-print0 | xargs -0 -I {} printf '%s\n' '{}' >> "$temp_file"
+
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
 	}
 
 	# rename all subdirs from depth to cwd
 	rename_dirs_auto() {
+		local temp_file
+		temp_file=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file"' EXIT
+
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes | rename
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | sort_by_slashes >> "$temp_file"
+
+		while IFS= read -r line; do
+			rename "$line"
+		done < "$temp_file"
 	}
 
 	rename_files_manual() {
