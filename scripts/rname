@@ -173,6 +173,23 @@ check_extension() {
 	fi
 }
 
+show_thinking_animation() {
+	echo "-----------------------"
+	local message="Counting items..."
+	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+	local i=0
+
+	tput civis # Hide the cursor
+	while :; do
+		printf "\r%s %s" "${spinner[i++ % ${#spinner[@]}]}" "$message"
+		sleep 0.1
+		# Stop animation when the parent process finishes
+		kill -0 "$PPID" 2>/dev/null || break
+	done
+	printf "\r\033[K" # Clear the line
+	tput cnorm # Restore the cursor
+}
+
 # takes 1 arg: old_str; echo new_str
 rename_str() {
 	local name="$1"
@@ -414,7 +431,6 @@ rename() {
 		else
 
 			auto_rename "$path"
-
 		fi
 	}
 
@@ -549,9 +565,12 @@ filter_paths_manual_only | wc -l
 
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
-		auto_total=$(( $(count_files_auto) + $(count_dirs_auto) ))
 
-		echo "auto total ${auto_total}"
+		show_thinking_animation &
+		animation_pid=$!
+		auto_total=$(( $(count_files_auto) + $(count_dirs_auto) ))
+		kill $animation_pid 2>/dev/null
+		echo "complete."
 
 		rename_files_auto
 		rename_dirs_auto
