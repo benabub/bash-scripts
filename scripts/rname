@@ -232,9 +232,18 @@ rename() {
 		# Progress bar
 		if [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
 			((auto_current++))
-			printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 40 / auto_total))))" $((auto_current * 100 / auto_total))
-			[ $auto_current -eq $auto_total ] && { printf "\n"; tput cnorm; }
+
+			echo "auto_total: $auto_total"
+			echo "auto_current: $auto_current"
+			
+			if [ $auto_current -eq $auto_total ]; then
+				printf "\r\033[KRenaming Progress: [%-40s] 100%%\n" "$(printf '#%.0s' $(seq 1 40))"
+			else
+				printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 40 / auto_total))))" $((auto_current * 100 / auto_total))
+			fi
 		fi
+
+		tput cnorm # Ensure the cursor is restored
 
 		if check_extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
