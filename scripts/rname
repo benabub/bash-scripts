@@ -232,7 +232,7 @@ rename() {
 		# Progress bar
 		if [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
 			((auto_current++))
-			printf "\rRenaming Progress: [%-50s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 50 / auto_total))))" $((auto_current * 100 / auto_total))
+			printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 40 / auto_total))))" $((auto_current * 100 / auto_total))
 			[ $auto_current -eq $auto_total ] && { printf "\n"; tput cnorm; }
 		fi
 
