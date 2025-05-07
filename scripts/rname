@@ -94,6 +94,7 @@ EOF
 
 # takes 1 arg: question string
 ask_confirm() {
+	echo "-----------------------"
 	read -rp "$1" answer
 	if [[ "$answer" =~ ^(y|yes|Y|YES)$ ]]; then
 		return 0
@@ -105,6 +106,7 @@ ask_confirm() {
 
 # ask for separator: `_` (1) or `-` (2), Empty - default
 ask_sep() {
+	echo "-----------------------"
 	echo "Please, choose the separator, default: {_}:"
 	echo "(1): {_} ('Bla Bla' -> 'bla_bla')"
 	echo "(2): {-} ('Bla Bla' -> 'bla-bla')"
@@ -232,7 +234,7 @@ rename() {
 		if [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
 			((auto_current++))
 			printf "\rRenaming Progress: [%-50s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 50 / auto_total))))" $((auto_current * 100 / auto_total))
-			[ $auto_current -eq $auto_total ] && printf "\n"
+			[ $auto_current -eq $auto_total ] && { printf "\n"; tput cnorm; }
 		fi
 
 		if check_extension "$path" "$name_old"; then
@@ -703,6 +705,25 @@ exclude() {
 		done < "$temp_file"
 	}
 
+	count_files_auto() {
+		local str_files
+		str_files="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+		eval "$str_files" | wc -l
+	}
+
+	count_dirs_auto() {
+		local str_dirs
+		str_dirs="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+		eval "$str_dirs" | wc -l
+	}
+
 	count_files_manual() {
 		local str_files
 		str_files="find . \
@@ -724,6 +745,13 @@ exclude() {
 
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
+
+		show_thinking_animation &
+		animation_pid=$!
+		auto_total=$(( $(count_files_auto) + $(count_dirs_auto) ))
+		kill $animation_pid 2>/dev/null
+		echo "completed."
+
 		rename_files_auto
 		rename_dirs_auto
 		return
