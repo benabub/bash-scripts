@@ -120,6 +120,7 @@ ask_sep() {
 		echo "Unknown separator: $answer"
 		return 1
 	fi
+	echo "-----------------------"
 }
 
 check_no_args() {
@@ -176,7 +177,6 @@ check_extension() {
 }
 
 show_thinking_animation() {
-	echo "-----------------------"
 	local message="Counting items..."
 	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 	local i=0
@@ -569,6 +569,8 @@ filter_paths_manual_only | wc -l
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
 
+		echo "Renaming tree: '$(pwd)'"
+
 		show_thinking_animation &
 		animation_pid=$!
 		auto_total=$(( $(count_files_auto) + $(count_dirs_auto) ))
@@ -637,7 +639,8 @@ only() {
 }
 
 exclude() {
-	local exclude_dirs=""
+	local exclude_dirs_find=""
+	local exclude_dirs_massage=""
 	for pattern in "$@"; do
 		# cutting off ending `/` if presented
 		if [[ "$pattern" == */ ]]; then
@@ -647,13 +650,14 @@ exclude() {
 		if ! [[ "$pattern" =~ ^\.\/.* ]]; then
 			pattern="./$pattern"
 		fi
-		exclude_dirs+="-o -path '$pattern' "
+		exclude_dirs_find+="-o -path '$pattern' "
+		exclude_dirs_massage+="'$pattern' "
 	done
 
 	rename_files_auto() {
 		local str_files
 		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
@@ -663,7 +667,7 @@ exclude() {
 	rename_dirs_auto() {
 		local str_dirs
 		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | sort_by_slashes | rename
@@ -677,7 +681,7 @@ exclude() {
 
 		local str_files
 		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | filter_paths_manual_all  >> "$temp_file"
@@ -695,7 +699,7 @@ exclude() {
 
 		local str_dirs
 		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type d \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | filter_paths_manual_all | sort_by_slashes >> "$temp_file"
@@ -708,7 +712,7 @@ exclude() {
 	count_files_auto() {
 		local str_files
 		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
@@ -718,7 +722,7 @@ exclude() {
 	count_dirs_auto() {
 		local str_dirs
 		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs\) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | wc -l
@@ -727,7 +731,7 @@ exclude() {
 	count_files_manual() {
 		local str_files
 		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '*[! -~]*' \) \
 -print"
@@ -737,7 +741,7 @@ exclude() {
 	count_dirs_manual() {
 		local str_dirs
 		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs \) -prune \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find \) -prune \
 -o -type d \( -name '*[! -~]*' \) \
 -print"
 		eval "$str_dirs" | filter_paths_manual_only | wc -l
@@ -745,6 +749,8 @@ exclude() {
 
 	# no manual
 	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
+
+		echo "Renaming tree: '$(pwd)' excluding dirs: $exclude_dirs_massage"
 
 		show_thinking_animation &
 		animation_pid=$!
