@@ -1,7 +1,17 @@
 # bash-scripts
 custom commands for UNIX-like shells
 
-### How to make it work:
+## List of scripts
+
+- [hyprland-borders-nl](./docs/hyprland-borders-nl.md) - 
+- [hyprland-borders-us](./docs/hyprland-borders-us.md) - 
+- [rname](./docs/rname.md) - 
+- [weather-day-after-tomorrow](./docs/weather-day-after-tomorrow.md) - 
+- [weather-icon](./docs/weather-icon.md) - 
+- [weather-now](./docs/weather-now.md) - 
+- [weather-tomorrow](./docs/weather-tomorrow.md) - 
+
+## How to make it work:
 
 1. clone this repo on your machine
 
@@ -9,7 +19,7 @@ custom commands for UNIX-like shells
 
 3. give permissions to scripts
 
-### Clone this repo on your machine
+## Clone this repo on your machine
 
 Open in shell the folder you want to put this repo in and do:
 
@@ -23,7 +33,7 @@ For example, my location is:
 ~/bin/bash-scripts
 ```
 
-### Add the folder with scripts to $PATH variable permanently
+## Add the folder with scripts to $PATH variable permanently
 
 If you use bash, you need to change `~/.bashrc`
 
