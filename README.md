@@ -3,13 +3,7 @@ custom commands for UNIX-like shells
 
 ## List of scripts
 
-- [hyprland-borders-nl](./docs/hyprland-borders-nl.md) - 
-- [hyprland-borders-us](./docs/hyprland-borders-us.md) - 
-- [rname](./docs/rname.md) - 
-- [weather-day-after-tomorrow](./docs/weather-day-after-tomorrow.md) - 
-- [weather-icon](./docs/weather-icon.md) - 
-- [weather-now](./docs/weather-now.md) - 
-- [weather-tomorrow](./docs/weather-tomorrow.md) - 
+- [rname](./docs/rname.md) - переименование файловых деревьев: замена пробелов на сепаратор, понижение регистра.
 
 ## How to make it work:
 

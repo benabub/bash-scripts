@@ -1,3 +1,0 @@
-# weather-day-after-tomorrow
-
-
