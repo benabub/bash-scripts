@@ -40,7 +40,7 @@ This script provides a flexible way to rename files and directories in a directo
 ## Usage
 
 ```bash
-./rename_tree.sh [--dryrun | -n] [OPTION] [DIRS...]
+rname [--dryrun | -n] [OPTION] [DIRS...]
 ```
 
 ### Options
@@ -66,27 +66,27 @@ This script provides a flexible way to rename files and directories in a directo
 
 1. Preview renaming of entire directory tree:
    ```bash
-   ./rename_tree.sh --dryrun
+   rname --dryrun
    ```
 
 2. Rename entire directory tree (actual changes):
    ```bash
-   ./rename_tree.sh
+   rname
    ```
 
 3. Rename only specific directories:
    ```bash
-   ./rename_tree.sh --only dir1 dir2
+   rname --only dir1 dir2
    ```
 
 4. Rename directory tree excluding specific directories:
    ```bash
-   ./rename_tree.sh --exclude dir_to_skip another_dir
+   rname --exclude dir_to_skip another_dir
    ```
 
 5. Rename with manual handling of non-ASCII filenames:
    ```bash
-   ./rename_tree.sh --files
+   rname --files
    ```
 
 ## Notes
