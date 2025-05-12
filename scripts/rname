@@ -483,6 +483,51 @@ Filter_Paths_Manual_Only() {
 
 Rename_Tree() {
 
+	# for no manual mode
+	Rename_Files_And_Dirs_Auto_Include() {
+
+		local temp_file_files
+		temp_file_files=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file_files"' EXIT
+
+		local temp_file_dirs
+		temp_file_dirs=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file_dirs"' EXIT
+
+		# start async animation process
+		Show_Thinking_Animation &
+		animation_pid=$!
+
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | Sort_By_Slashes >> "$temp_file_dirs"
+
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' >> "$temp_file_files"
+
+		AUTO_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+
+		# stop async animation process
+		kill $animation_pid 2>/dev/null
+		# finish animation process message
+		echo "completed."
+
+		while IFS= read -r line; do
+			Rename "$line"
+		done < "$temp_file_files"
+
+		while IFS= read -r line; do
+			Rename "$line"
+		done < "$temp_file_dirs"
+	}
+
+
 	# rename all regular files in a tree
 	rename_files_auto() {
 		local temp_file
@@ -552,21 +597,6 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 		done < "$temp_file"
 	}
 
-	count_files_auto() {
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | wc -l
-	}
-
-	count_dirs_auto() {
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | wc -l
-	}
-
 	count_files_manual() {
 		find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
@@ -585,18 +615,9 @@ Filter_Paths_Manual_Only | wc -l
 
 	# no manual
 	if [ $MANUAL_FILES -eq 0 ] && [ $MANUAL_DIRS -eq 0 ]; then
-
 		echo "-----------------------"
 		echo "Renaming tree: '$(pwd)'"
-
-		Show_Thinking_Animation &
-		animation_pid=$!
-		AUTO_TOTAL=$(( $(count_files_auto) + $(count_dirs_auto) ))
-		kill $animation_pid 2>/dev/null
-		echo "completed."
-
-		rename_files_auto
-		rename_dirs_auto
+		Rename_Files_And_Dirs_Auto_Include
 		return
 	fi
 
@@ -626,7 +647,7 @@ Filter_Paths_Manual_Only | wc -l
 
 Only() {
 
-	check_dir_name() {
+	Check_Dir_Name() {
 		local dir="$1"
 		local name="${dir##*/}"
 		if [[ "$name" =~ [A-Z[:space:]_-] ]]; then
@@ -647,7 +668,7 @@ Only() {
 		if cd "$dir"; then
 			Rename_Tree
 			cd "$cwd" || { echo "Failed to change directory to '$cwd'"; exit 1; }
-			if check_dir_name "$dir"; then
+			if Check_Dir_Name "$dir"; then
 				Rename "$dir" || echo "Failed to rename '$dir'"
 			fi
 		else
