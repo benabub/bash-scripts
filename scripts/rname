@@ -176,7 +176,6 @@ Check_Extension() {
 }
 
 Show_Thinking_Animation() {
-	echo "-----------------------"
 	local message="$1"
 	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 	local i=0
@@ -222,13 +221,16 @@ Rename_Str() {
 # performs manual renaming of non-ASCII names if necessary
 Rename() {
 
+	local show_progress=$1
+	shift
+
 	Auto_Rename() {
 		local path="$1"
 		local prefix="${path%/*}"
 		local name_old="${path##*/}"
 
 		# Progress bar
-		if [ $DRYRUN -eq 0 ] && [ $MANUAL_DIRS -eq 0 ] && [ $MANUAL_FILES -eq 0 ]; then
+		if [ "$show_progress" -eq 1 ] && [ $DRYRUN -eq 0 ] && [ $MANUAL_DIRS -eq 0 ] && [ $MANUAL_FILES -eq 0 ]; then
 			((AUTO_CURRENT++))
 
 		printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((AUTO_CURRENT * 40 / AUTO_TOTAL))))" $((AUTO_CURRENT * 100 / AUTO_TOTAL))
@@ -480,7 +482,7 @@ Filter_Paths_Manual_Only() {
 	done
 }
 
-Rename_Tree() {
+Include() {
 
 	# for no manual mode
 	Rename_Files_And_Dirs_Auto_Include() {
@@ -519,11 +521,11 @@ Rename_Tree() {
 		tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file_files"
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file_dirs"
 	}
 
@@ -565,11 +567,11 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 		tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file_files"
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file_dirs"
 	}
 
@@ -587,7 +589,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 -print0 | xargs -0 -I {} printf '%s\n' '{}' >> "$temp_file"
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
@@ -604,7 +606,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | Sort_By_Slashes >> "$temp_file"
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
@@ -623,7 +625,7 @@ Filter_Paths_Manual_All >> "$temp_file"
 		MANUAL_TOTAL=$(wc -l < "$temp_file")
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
@@ -642,7 +644,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 		MANUAL_TOTAL=$(wc -l < "$temp_file")
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
@@ -716,10 +718,12 @@ Only() {
 		[[ "$dir" =~ .*\/$ ]] && dir="${dir%/}"
 
 		if cd "$dir"; then
-			Rename_Tree
+			Include
+			AUTO_TOTAL=0
+			AUTO_CURRENT=0
 			cd "$cwd" || { echo "Failed to change directory to '$cwd'"; exit 1; }
 			if Check_Dir_Name "$dir"; then
-				Rename "$dir" || echo "Failed to rename '$dir'"
+				Rename 0 "$dir" || echo "Failed to rename '$dir'"
 			fi
 		else
 			echo "Failed to change directory to '$dir'"
@@ -750,7 +754,7 @@ Exclude() {
 -o -type f ! \( -name '.*' -o -name '~*' \) \
 -a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files" | Rename
+		eval "$str_files" | Rename 1
 	}
 
 	rename_dirs_auto() {
@@ -759,7 +763,7 @@ Exclude() {
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | Sort_By_Slashes | Rename
+		eval "$str_dirs" | Sort_By_Slashes | Rename 1
 	}
 
 	rename_files_manual() {
@@ -776,7 +780,7 @@ Exclude() {
 		eval "$str_files" | Filter_Paths_Manual_All  >> "$temp_file"
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
@@ -794,7 +798,7 @@ Exclude() {
 		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
 		while IFS= read -r line; do
-			Rename "$line"
+			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
@@ -967,7 +971,7 @@ if [ $OPTION -eq 0 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)'? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
-	Rename_Tree
+	Include
 
 	exit 0
 fi
@@ -1005,7 +1009,7 @@ if [ $OPTION -eq 3 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each non-ASCII filename? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
-	Rename_Tree
+	Include
 	
 	exit 0
 fi
@@ -1043,7 +1047,7 @@ if [ $OPTION -eq 4 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
-	Rename_Tree
+	Include
 	
 	exit 0
 fi
@@ -1081,7 +1085,7 @@ if [ $OPTION -eq 5 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory and regular file containing non-ASCII characters in their names? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
-	Rename_Tree
+	Include
 	
 	exit 0
 fi
