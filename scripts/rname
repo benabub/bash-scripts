@@ -192,6 +192,24 @@ Show_Thinking_Animation() {
 	tput cnorm # Restore the cursor
 }
 
+Run_With_Animation() {
+	local message=$1
+	shift
+	local block_of_code=$1
+
+	# Start async animation process
+	Show_Thinking_Animation "$message" &
+	local animation_pid=$!
+
+	# Run the passed function
+	"$block_of_code"
+
+	# Stop async animation process
+	kill $animation_pid 2>/dev/null
+	# Finish animation process message
+	echo "completed."
+}
+
 # takes 1 arg: old_str; echo new_str
 Rename_Str() {
 	local name="$1"
