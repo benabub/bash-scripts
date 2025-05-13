@@ -188,8 +188,6 @@ Show_Thinking_Animation() {
 		# Stop animation when the parent process finishes
 		kill -0 "$PPID" 2>/dev/null || break
 	done
-	# printf "\r\033[K" # Clear the line
-	# tput cnorm # Restore the cursor
 }
 
 # takes 1 arg: old_str; echo new_str
