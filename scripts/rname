@@ -176,7 +176,8 @@ Check_Extension() {
 }
 
 Show_Thinking_Animation() {
-	local message="Counting items..."
+	# local message="Counting items..."
+	local message="$1"
 	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 	local i=0
 
@@ -497,7 +498,7 @@ Rename_Tree() {
 		trap 'rm -f "$temp_file_dirs"' EXIT
 
 		# start async animation process
-		Show_Thinking_Animation &
+		Show_Thinking_Animation "Counting items..." &
 		animation_pid=$!
 
 		find . \
@@ -792,7 +793,7 @@ Exclude() {
 		echo "-----------------------"
 		echo "Renaming tree: '$(pwd)' excluding dirs: $exclude_dirs_massage"
 
-		Show_Thinking_Animation &
+		Show_Thinking_Animation "Counting items..." &
 		animation_pid=$!
 		AUTO_TOTAL=$(( $(count_files_auto) + $(count_dirs_auto) ))
 		kill $animation_pid 2>/dev/null
