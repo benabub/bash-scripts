@@ -176,7 +176,7 @@ Check_Extension() {
 }
 
 Show_Thinking_Animation() {
-	# local message="Counting items..."
+	echo "-----------------------"
 	local message="$1"
 	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 	local i=0
@@ -188,8 +188,8 @@ Show_Thinking_Animation() {
 		# Stop animation when the parent process finishes
 		kill -0 "$PPID" 2>/dev/null || break
 	done
-	printf "\r\033[K" # Clear the line
-	tput cnorm # Restore the cursor
+	# printf "\r\033[K" # Clear the line
+	# tput cnorm # Restore the cursor
 }
 
 # takes 1 arg: old_str; echo new_str
@@ -518,6 +518,7 @@ Rename_Tree() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
+		tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
 			Rename "$line"
@@ -528,9 +529,54 @@ Rename_Tree() {
 		done < "$temp_file_dirs"
 	}
 
+	# for no manual mode
+	Rename_Files_And_Dirs_Manual_Include() {
+
+		local temp_file_files
+		temp_file_files=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file_files"' EXIT
+
+		local temp_file_dirs
+		temp_file_dirs=$(mktemp)
+		# remove temp file on exit:
+		trap 'rm -f "$temp_file_dirs"' EXIT
+
+		# start async animation process
+		Show_Thinking_Animation "Counting items..." &
+		animation_pid=$!
+
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+Filter_Paths_Manual_All >> "$temp_file_files"
+
+		find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \
+-print0 | xargs -0 -I {} printf '%s\n' '{}' | \
+Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
+
+		MANUAL_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+
+		# stop async animation process
+		kill $animation_pid 2>/dev/null
+		# finish animation process message
+		echo "completed."
+		tput cnorm # Restore the cursor
+
+		while IFS= read -r line; do
+			Rename "$line"
+		done < "$temp_file_files"
+
+		while IFS= read -r line; do
+			Rename "$line"
+		done < "$temp_file_dirs"
+	}
 
 	# rename all regular files in a tree
-	rename_files_auto() {
+	Rename_Files_Auto_Include() {
 		local temp_file
 		temp_file=$(mktemp)
 		# remove temp file on exit:
@@ -548,7 +594,7 @@ Rename_Tree() {
 	}
 
 	# rename all subdirs from depth to cwd
-	rename_dirs_auto() {
+	Rename_Dirs_Auto_Include() {
 		local temp_file
 		temp_file=$(mktemp)
 		# remove temp file on exit:
@@ -564,7 +610,7 @@ Rename_Tree() {
 		done < "$temp_file"
 	}
 
-	rename_files_manual() {
+	Rename_Files_Manual_Include() {
 		local temp_file
 		temp_file=$(mktemp)
 		# remove temp file on exit:
@@ -576,12 +622,14 @@ Rename_Tree() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 Filter_Paths_Manual_All >> "$temp_file"
 
+		MANUAL_TOTAL=$(wc -l < "$temp_file")
+
 		while IFS= read -r line; do
 			Rename "$line"
 		done < "$temp_file"
 	}
 
-	rename_dirs_manual() {
+	Rename_Dirs_Manual_Include() {
 		local temp_file
 		temp_file=$(mktemp)
 		# remove temp file on exit:
@@ -593,25 +641,11 @@ Filter_Paths_Manual_All >> "$temp_file"
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
+		MANUAL_TOTAL=$(wc -l < "$temp_file")
+
 		while IFS= read -r line; do
 			Rename "$line"
 		done < "$temp_file"
-	}
-
-	count_files_manual() {
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-Filter_Paths_Manual_Only | wc -l
-	}
-
-	count_dirs_manual() {
-	find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-Filter_Paths_Manual_Only | wc -l
 	}
 
 	# no manual
@@ -624,25 +658,42 @@ Filter_Paths_Manual_Only | wc -l
 
 	# manual renaming dirs
 	if [ $MANUAL_DIRS -eq 1 ] && [ $MANUAL_FILES -eq 0 ]; then
-		MANUAL_TOTAL=$(count_dirs_manual)
-		rename_files_auto
-		rename_dirs_manual
+
+		# start async animation process
+		Show_Thinking_Animation "Automatically renaming files..." &
+		animation_pid=$!
+		Rename_Files_Auto_Include
+		# stop async animation process
+		kill $animation_pid 2>/dev/null
+		# finish animation process message
+		echo "completed."
+		tput cnorm # Restore the cursor
+
+		Rename_Dirs_Manual_Include
 		return
 	fi
 
 	# manual renaming files
 	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 0 ]; then
-		MANUAL_TOTAL=$(count_files_manual)
-		rename_files_manual
-		rename_dirs_auto
+
+		Rename_Files_Manual_Include
+
+		# start async animation process
+		Show_Thinking_Animation "Automatically renaming directories..." &
+		animation_pid=$!
+		Rename_Dirs_Auto_Include
+		# stop async animation process
+		kill $animation_pid 2>/dev/null
+		# finish animation process message
+		echo "completed."
+		tput cnorm # Restore the cursor
+
 		return
 	fi
 
 	# manual renaming both (files + dirs)
 	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 1 ]; then
-		MANUAL_TOTAL=$(( $(count_files_manual) + $(count_dirs_manual) ))
-		rename_files_manual
-		rename_dirs_manual
+		Rename_Files_And_Dirs_Manual_Include
 	fi
 }
 
