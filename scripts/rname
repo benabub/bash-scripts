@@ -661,6 +661,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 	# manual renaming dirs
 	if [ $MANUAL_DIRS -eq 1 ] && [ $MANUAL_FILES -eq 0 ]; then
 
+		echo "-----------------------"
 		# start async animation process
 		Show_Thinking_Animation "Automatically renaming files..." &
 		animation_pid=$!
@@ -680,6 +681,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
 		Rename_Files_Manual_Include
 
+		echo "-----------------------"
 		# start async animation process
 		Show_Thinking_Animation "Automatically renaming directories..." &
 		animation_pid=$!
@@ -695,6 +697,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
 	# manual renaming both (files + dirs)
 	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 1 ]; then
+		echo "-----------------------"
 		Rename_Files_And_Dirs_Manual_Include
 	fi
 }
@@ -748,8 +751,6 @@ Exclude() {
 		exclude_dirs_find+="-o -path '$pattern' "
 		exclude_dirs_massage+="'$pattern' "
 	done
-
-############################
 
 	# for mix mode: MANUAL_FILES=0 && MANUAL_DIRS=1
 	Rename_Files_Auto_Exclude() {
@@ -922,6 +923,7 @@ Exclude() {
 	# manual renaming dirs
 	if [ $MANUAL_DIRS -eq 1 ] && [ $MANUAL_FILES -eq 0 ]; then
 
+		echo "-----------------------"
 		# start async animation process
 		Show_Thinking_Animation "Automatically renaming files..." &
 		animation_pid=$!
@@ -941,6 +943,7 @@ Exclude() {
 
 		Rename_Files_Manual_Exclude
 
+		echo "-----------------------"
 		# start async animation process
 		Show_Thinking_Animation "Automatically renaming directories..." &
 		animation_pid=$!
@@ -956,143 +959,9 @@ Exclude() {
 
 	# manual renaming both (files + dirs)
 	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 1 ]; then
+		echo "-----------------------"
 		Rename_Files_And_Dirs_Manual_Exclude
 	fi
-
-############################
-
-# 	rename_files_auto() {
-# 		local str_files
-# 		str_files="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
-# -o -type f ! \( -name '.*' -o -name '~*' \) \
-# -a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
-# -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-# 		eval "$str_files" | Rename 1
-# 	}
-
-# 	rename_dirs_auto() {
-# 		local str_dirs
-# 		str_dirs="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
-# -o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
-# -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-# 		eval "$str_dirs" | Sort_By_Slashes | Rename 1
-# 	}
-#
-# 	rename_files_manual() {
-# 		local temp_file
-# 		temp_file=$(mktemp)
-# 		# remove temp file on exit:
-# 		trap 'rm -f "$temp_file"' EXIT
-#
-# 		local str_files
-# 		str_files="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
-# -o -type f ! \( -name '.*' -o -name '~*' \) \
-# -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-# 		eval "$str_files" | Filter_Paths_Manual_All  >> "$temp_file"
-#
-# 		while IFS= read -r line; do
-# 			Rename 1 "$line"
-# 		done < "$temp_file"
-# 	}
-
-# 	rename_dirs_manual() {
-# 		local temp_file
-# 		temp_file=$(mktemp)
-# 		# remove temp file on exit:
-# 		trap 'rm -f "$temp_file"' EXIT
-#
-# 		local str_dirs
-# 		str_dirs="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
-# -o -type d \
-# -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-# 		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
-#
-# 		while IFS= read -r line; do
-# 			Rename 1 "$line"
-# 		done < "$temp_file"
-# 	}
-#
-# 	count_files_auto() {
-# 		local str_files
-# 		str_files="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
-# -o -type f ! \( -name '.*' -o -name '~*' \) \
-# -a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
-# -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-# 		eval "$str_files" | wc -l
-# 	}
-#
-# 	count_dirs_auto() {
-# 		local str_dirs
-# 		str_dirs="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
-# -o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
-# -print0 | xargs -0 -I {} printf '%s\n' '{}'"
-# 		eval "$str_dirs" | wc -l
-# 	}
-#
-# 	count_files_manual() {
-# 		local str_files
-# 		str_files="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find \) -prune \
-# -o -type f ! \( -name '.*' -o -name '~*' \) \
-# -a \( -name '*[! -~]*' \) \
-# -print"
-# 		eval "$str_files" | Filter_Paths_Manual_Only | wc -l
-# 	}
-#
-# 	count_dirs_manual() {
-# 		local str_dirs
-# 		str_dirs="find . \
-# -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find \) -prune \
-# -o -type d \( -name '*[! -~]*' \) \
-# -print"
-# 		eval "$str_dirs" | Filter_Paths_Manual_Only | wc -l
-# 	}
-
-	# # no manual
-	# if [ $MANUAL_FILES -eq 0 ] && [ $MANUAL_DIRS -eq 0 ]; then
-	#
-	# 	echo "-----------------------"
-	# 	echo "Renaming tree: '$(pwd)' excluding dirs: $exclude_dirs_massage"
-	#
-	# 	Show_Thinking_Animation "Counting items..." &
-	# 	animation_pid=$!
-	# 	AUTO_TOTAL=$(( $(count_files_auto) + $(count_dirs_auto) ))
-	# 	kill $animation_pid 2>/dev/null
-	# 	echo "completed."
-	#
-	# 	rename_files_auto
-	# 	rename_dirs_auto
-	# 	return
-	# fi
-
-	# # manual renaming dirs
-	# if [ $MANUAL_DIRS -eq 1 ] && [ $MANUAL_FILES -eq 0 ]; then
-	# 	MANUAL_TOTAL=$(count_dirs_manual)
-	# 	rename_files_auto
-	# 	rename_dirs_manual
-	# 	return
-	# fi
-	#
-	# # manual renaming files
-	# if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 0 ]; then
-	# 	MANUAL_TOTAL=$(count_files_manual)
-	# 	rename_files_manual
-	# 	rename_dirs_auto
-	# 	return
-	# fi
-	#
-	# # manual renaming both (files + dirs)
-	# if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 1 ]; then
-	# 	MANUAL_TOTAL=$(( $(count_files_manual) + $(count_dirs_manual) ))
-	# 	rename_files_manual
-	# 	rename_dirs_manual
-	# fi
 
 }
 
