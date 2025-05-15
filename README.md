@@ -4,7 +4,7 @@ Custom commands for UNIX-like shells.
 
 ## List of Scripts
 
-- [rname](./docs/rname.md) - Rename file trees: replace spaces with a separator and convert filenames to lowercase.
+- [rname](./scripts/rname/README.md) - Rename file trees: replace spaces with a separator and convert filenames to lowercase.
 
 ## Installation
 
