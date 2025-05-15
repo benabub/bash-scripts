@@ -333,6 +333,8 @@ Rename() {
 
 		if [ "$MANUAL_TOTAL" -ne 0 ]; then
 			percentage=$(( (MANUAL_CURRENT * 100) / MANUAL_TOTAL ))
+			echo "manual current: $MANUAL_CURRENT"
+			echo "manual total: $MANUAL_TOTAL"
 			echo "--------- Manual Renaming: $percentage% -------------"
 		fi
 		((MANUAL_CURRENT++))
@@ -577,7 +579,7 @@ Include() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 Filter_Paths_Manual_All >> "$temp_file"
 
-		MANUAL_TOTAL=$(wc -l < "$temp_file")
+		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -597,7 +599,7 @@ Filter_Paths_Manual_All >> "$temp_file"
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
-		MANUAL_TOTAL=$(wc -l < "$temp_file")
+		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -633,7 +635,8 @@ Filter_Paths_Manual_All >> "$temp_file_files"
 -print0 | xargs -0 -I {} printf '%s\n' '{}' | \
 Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
-		MANUAL_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+		MANUAL_TOTAL=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
+			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
 		# stop async animation process
 		kill $animation_pid 2>/dev/null
@@ -836,7 +839,7 @@ Exclude() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | Filter_Paths_Manual_All  >> "$temp_file"
 
-		MANUAL_TOTAL=$(wc -l < "$temp_file")
+		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -857,7 +860,7 @@ Exclude() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
-		MANUAL_TOTAL=$(wc -l < "$temp_file")
+		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -895,7 +898,8 @@ Exclude() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
-		MANUAL_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+		MANUAL_TOTAL=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
+			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
 		# stop async animation process
 		kill $animation_pid 2>/dev/null
