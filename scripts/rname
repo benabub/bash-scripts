@@ -1,13 +1,43 @@
 #!/bin/bash
 
-# Rename dir-tree (regular files & directories): lowercase + whitespaces -> '-'
-# ignoring files and dirs, which begin with `.` | `~`
-# matches existing paths and rename it with new indices
-# as options: exclude || add dirs to rename
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+#
+# Performs recursive renaming of files and directories in directory tree:
+# - Converts uppercase letters to lowercase
+# - Replaces whitespace with specified separator ($SEP)
+# - Transforms mixed-case sequences ([:upper:][:lower:]) to lowercase with separator
+#
+# Exclusion rules:
+# - Skips hidden files/directories (starting with '.' or '~')
+#
+# Conflict resolution:
+# - Handles name collisions by appending numeric indices
+#
+# ========================================================
+# SCRIPT WORKFLOW CORE MECHANICS
+# ========================================================
+#
+# Main tool: custom Rename() function.
+#
+# The logic splits into two distinct branches: Include() and Exclude().
+# Include() handles default mode (no options) and --only mode.
+# Exclude() handles --exclude mode.
+#
+# Include() and Exclude() share common patterns, but merging them
+# wasn't feasible due to a critical difference:
+# - find command doesn't allow string substitution in -prune section
+#   (for excluded directories list)
+# - The only workaround is eval, which is generally unsafe.
+# Thus:
+# - Exclude() MUST use eval
+# - Include() CAN avoid it entirely
 
-#######################
+
+# ========================================================
 # vars
-#######################
+# ========================================================
 
 OPTION=0
 MANUAL_FILES=0
@@ -20,9 +50,9 @@ DRYRUN=0
 SEP="_"
 ANTI_SEP="-"
 
-#######################
+# ========================================================
 # functions
-#######################
+# ========================================================
 
 Show_Help() {
     cat <<EOF
@@ -130,7 +160,7 @@ Check_No_Args() {
 	return 0
 }
 
-# check if any arg starts with hyphen
+# Check if any arg starts with hyphen
 Check_No_More_Opts() {
 	for i in "$@"; do
 		if [[ "$i" = -n ]] || [[ "$i" = --DRYRUN ]]; then
@@ -163,7 +193,7 @@ Check_Subdir() {
 	return 0
 }
 
-# takes 2 args: object path, object name
+# Takes 2 args: object path, object name
 Check_Extension() {
 	local path="$1"
 	local name="$2"
@@ -189,7 +219,7 @@ Show_Thinking_Animation() {
 	done
 }
 
-# takes 1 arg: old_str; echo new_str
+# Takes 1 arg: old_str; echo new_str
 Rename_Str() {
 	local name="$1"
 
@@ -216,9 +246,10 @@ Rename_Str() {
 	echo "$name"
 }
 
-# function to rename a file with checking if new name already exists, else renaiming with index
-# handle both arg and stdin
-# performs manual renaming of non-ASCII names if necessary
+# Takes 2 args: 1st (1|0) - show | not to show progress bar for auto renaming; 2nd - the path to rename.
+# Function to rename a file with checking if new name already exists, else renaiming with index.
+# Handle both arg and stdin.
+# Performs manual renaming of non-ASCII names if necessary.
 Rename() {
 
 	local show_progress=$1
@@ -333,8 +364,6 @@ Rename() {
 
 		if [ "$MANUAL_TOTAL" -ne 0 ]; then
 			percentage=$(( (MANUAL_CURRENT * 100) / MANUAL_TOTAL ))
-			echo "manual current: $MANUAL_CURRENT"
-			echo "manual total: $MANUAL_TOTAL"
 			echo "--------- Manual Renaming: $percentage% -------------"
 		fi
 		((MANUAL_CURRENT++))
@@ -452,7 +481,7 @@ Rename() {
 	fi
 }
 
-# sort strings by the number of '/' symbols (replacement for -depth in find command to use in pipeline)
+# Sort strings by the number of '/' symbols (replacement for -depth in find command to use in pipeline)
 Sort_By_Slashes() {
 	# Read from stdin
 	while IFS= read -r line; do
@@ -462,7 +491,7 @@ Sort_By_Slashes() {
 	done | sort -nr | awk '{$1=""; print substr($0, 2)}'
 }
 
-# filter paths in pipelines by RE conditions in basename
+# Filter paths in pipelines by RE conditions in basename
 Filter_Paths_Manual_All() {
 	while IFS= read -r path; do
 		local name=""
@@ -473,7 +502,7 @@ Filter_Paths_Manual_All() {
 	done
 }
 
-# filter paths in pipelines by RE conditions in basename
+# Filter paths in pipelines by RE conditions in basename
 Filter_Paths_Manual_Only() {
 	while IFS= read -r path; do
 		local name=""
@@ -484,6 +513,7 @@ Filter_Paths_Manual_Only() {
 	done
 }
 
+# Common logic branch for non-exclude modes
 Include() {
 
 	# for mix mode: MANUAL_FILES=0 && MANUAL_DIRS=1
@@ -705,6 +735,7 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 	fi
 }
 
+# Logic branch for only mode
 Only() {
 
 	Check_Dir_Name() {
@@ -739,6 +770,7 @@ Only() {
 	done
 }
 
+# Logic branch for exclude mode
 Exclude() {
 	local exclude_dirs_find=""
 	local exclude_dirs_massage=""
@@ -969,9 +1001,9 @@ Exclude() {
 
 }
 
-#######################
+# ========================================================
 # parsing the command
-#######################
+# ========================================================
 
 case "$1" in
 --dryrun | -n)
@@ -1047,9 +1079,9 @@ case "$1" in
 	;;
 esac
 
-#######################
+# ========================================================
 # logic
-#######################
+# ========================================================
 
 # no args
 if [ $OPTION -eq 0 ]; then
