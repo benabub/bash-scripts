@@ -526,6 +526,37 @@ Filter_Paths_Manual_Only() {
 	done
 }
 
+
+Find_Files_Auto_Include() {
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'
+}
+
+Find_Dirs_Auto_Include() {
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'
+}
+
+Find_Files_Manual_Include() {
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'
+}
+
+Find_Dirs_Manual_Include() {
+	find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+-o -type d \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'
+}
+
+
 # Common logic branch for non-exclude modes
 Include() {
 
@@ -536,11 +567,7 @@ Include() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' >> "$temp_file"
+		Find_Files_Auto_Include >> "$temp_file"
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -554,10 +581,7 @@ Include() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | Sort_By_Slashes >> "$temp_file"
+		Find_Dirs_Auto_Include | Sort_By_Slashes >> "$temp_file"
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -581,16 +605,8 @@ Include() {
 		Show_Thinking_Animation "Counting items..." &
 		animation_pid=$!
 
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' >> "$temp_file_files"
-
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | Sort_By_Slashes >> "$temp_file_dirs"
+		Find_Files_Auto_Include >> "$temp_file_files"
+		Find_Dirs_Auto_Include | Sort_By_Slashes >> "$temp_file_dirs"
 
 		AUTO_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
 
@@ -616,11 +632,7 @@ Include() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-Filter_Paths_Manual_All >> "$temp_file"
+		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file"
 
 		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
@@ -636,11 +648,7 @@ Filter_Paths_Manual_All >> "$temp_file"
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
+		Find_Dirs_Manual_Include | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
 		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
@@ -666,17 +674,8 @@ Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 		Show_Thinking_Animation "Counting items..." &
 		animation_pid=$!
 
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-Filter_Paths_Manual_All >> "$temp_file_files"
-
-		find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}' | \
-Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
+		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file_files"
+		Find_Dirs_Manual_Include | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
 		MANUAL_TOTAL=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
@@ -782,6 +781,22 @@ Only() {
 		fi
 	done
 }
+
+# Find_Files_Auto_Exclude() {
+#
+# }
+#
+# Find_Dirs_Auto_Exclude() {
+#
+# }
+#
+# Find_Files_Manual_Exclude() {
+#
+# }
+#
+# Find_Dirs_Manual_Exclude() {
+#
+# }
 
 # Logic branch for exclude mode
 Exclude() {
