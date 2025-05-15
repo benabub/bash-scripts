@@ -223,7 +223,7 @@ Show_Thinking_Animation() {
 Rename_Str() {
 	local name="$1"
 
-	# Remove all prefixes and suffixes of '-', '_', and ' '
+	# remove all prefixes and suffixes of '-', '_', and ' '
 	while [[ "$name" =~ ^[-_[:space:]] ]]; do
 		name="${name#[-_ ]}"
 	done
@@ -231,17 +231,30 @@ Rename_Str() {
 		name="${name%[-_ ]}"
 	done
 
+	# collapse multiple spaces, underscores, or hyphens to a single instance:
+	if echo "$name" | grep -qE '[ _-]{2,}'; then
+		name="$(echo "$name" | sed -E 's/[ _-]+/_/g')"
+	fi
+
 	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
 		# shellcheck disable=SC2001
 		name=$(echo "$name" | sed "s/\([a-z]\)\([A-Z]\)/\1'$SEP'\2/g")
 	fi
-	name="${name// /$SEP}" # replace spaces with sep
-	name="${name,,}" # lowercase
+
+	# replace spaces with sep:
+	name="${name// /$SEP}"
+
+	# lowercase:
+	name="${name,,}"
+
+	# replace underscores with sep:
 	if [ $SEP = "-" ]; then
-		name="${name//_/$SEP}" # replace underscores with sep
+		name="${name//_/$SEP}"
 	fi
+
+	# replace hyphens with sep:
 	if [ $SEP = "_" ]; then
-		name="${name//-/$SEP}" # replace hyphens with sep
+		name="${name//-/$SEP}"
 	fi
 	echo "$name"
 }
