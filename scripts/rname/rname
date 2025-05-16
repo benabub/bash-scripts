@@ -6,7 +6,7 @@
 #
 # Performs recursive renaming of files and directories in directory tree:
 # - Converts uppercase letters to lowercase
-# - Replaces whitespace with specified separator ($SEP)
+# - Replaces whitespace with specified separator ($sep)
 # - Transforms mixed-case sequences ([:upper:][:lower:]) to lowercase with separator
 #
 # Exclusion rules:
@@ -39,40 +39,37 @@
 # vars
 # ========================================================
 
-OPTION=0
-MANUAL_FILES=0
-MANUAL_DIRS=0
-declare -i MANUAL_TOTAL
-MANUAL_CURRENT=0
-declare -i AUTO_TOTAL
-AUTO_CURRENT=0
-DRYRUN=0
-SEP="_"
-ANTI_SEP="-"
-
+option=0
+manual_files=0
+manual_dirs=0
+declare -i manual_total
+manual_current=0
+declare -i auto_total
+auto_current=0
+dryrun=0
+sep="_"
+anti_sep="-"
 
 # ========================================================
 # terminal restore
 # ========================================================
 
+# TODO: interrapting while Show_Thinking_Animation() - no term cursor restore
+
 original_stty=""
 interrupted=false
 
 cleanup() {
-	# Восстановление настроек терминала
 	[[ "$original_stty" ]] && stty "$original_stty" 2>/dev/null
-	tput cnorm 2>/dev/null  # Восстановление курсора
+	tput cnorm 2>/dev/null
 
-	# Если прервано сигналом - завершаем с кодом 130
 	if [[ "$interrupted" == true ]]; then
 		exit 130
 	fi
 }
 
-# Сохраняем настройки терминала
 original_stty=$(stty -g 2>/dev/null) || echo "Warning: Failed to save terminal settings" >&2
 
-# Настраиваем обработчики сигналов
 trap 'interrupted=true; cleanup' INT TERM HUP
 trap 'cleanup' EXIT
 
@@ -169,8 +166,8 @@ Ask_Sep() {
 	read -rp "Enter your choice (1|2|<Enter>): " answer
 	if [[ "$answer" =~ ^[1-2]$ || -z "$answer" ]]; then
 		if [ "$answer" = 2 ]; then
-			SEP="-"
-			ANTI_SEP="_"
+			sep="-"
+			anti_sep="_"
 		fi
 	else
 		echo "Unknown separator: $answer"
@@ -189,7 +186,7 @@ Check_No_Args() {
 # Check if any arg starts with hyphen
 Check_No_More_Opts() {
 	for i in "$@"; do
-		if [[ "$i" = -n ]] || [[ "$i" = --DRYRUN ]]; then
+		if [[ "$i" = -n ]] || [[ "$i" = --dryrun ]]; then
 			echo "Please, use the --dryrun or -n option only at the beginning of the command."
 			return 1
 		fi
@@ -272,23 +269,23 @@ Rename_Str() {
 
 	if [[ "$name" =~ .*[a-z][A-Z].* ]]; then
 		# shellcheck disable=SC2001
-		name=$(echo "$name" | sed "s/\([a-z]\)\([A-Z]\)/\1'$SEP'\2/g")
+		name=$(echo "$name" | sed "s/\([a-z]\)\([A-Z]\)/\1'$sep'\2/g")
 	fi
 
 	# replace spaces with sep:
-	name="${name// /$SEP}"
+	name="${name// /$sep}"
 
 	# lowercase:
 	name="${name,,}"
 
 	# replace underscores with sep:
-	if [ $SEP = "-" ]; then
-		name="${name//_/$SEP}"
+	if [ $sep = "-" ]; then
+		name="${name//_/$sep}"
 	fi
 
 	# replace hyphens with sep:
-	if [ $SEP = "_" ]; then
-		name="${name//-/$SEP}"
+	if [ $sep = "_" ]; then
+		name="${name//-/$sep}"
 	fi
 	echo "$name"
 }
@@ -308,11 +305,11 @@ Rename() {
 		local name_old="${path##*/}"
 
 		# Progress bar
-		if [ "$show_progress" -eq 1 ] && [ $DRYRUN -eq 0 ] && [ $MANUAL_DIRS -eq 0 ] && [ $MANUAL_FILES -eq 0 ]; then
-			((AUTO_CURRENT++))
+		if [ "$show_progress" -eq 1 ] && [ $dryrun -eq 0 ] && [ $manual_dirs -eq 0 ] && [ $manual_files -eq 0 ]; then
+			((auto_current++))
 
-			printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((AUTO_CURRENT * 40 / AUTO_TOTAL))))" $((AUTO_CURRENT * 100 / AUTO_TOTAL))
-			[ $AUTO_CURRENT -eq $AUTO_TOTAL ] && printf "\n"
+			printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((auto_current * 40 / auto_total))))" $((auto_current * 100 / auto_total))
+			[ $auto_current -eq $auto_total ] && printf "\n"
 		fi
 
 		if Check_Extension "$path" "$name_old"; then
@@ -331,7 +328,7 @@ Rename() {
 				done
 
 				# rename with the new unique name
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "-----------------------"
 					echo "auto-rename/extension/exist: >$path<"
 					echo "mv $path $prefix/${base_name_new}-${index}.${extension}"
@@ -344,7 +341,7 @@ Rename() {
 			else
 
 				# if does not exist, rename directly
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "-----------------------"
 					echo "auto-rename/extension: >$path<"
 					echo "mv $path $prefix/${base_name_new}.${extension}"
@@ -370,7 +367,7 @@ Rename() {
 				done
 
 				# rename with the new unique name
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "-----------------------"
 					echo "auto-rename/exist: >$path<"
 					echo "mv $path $prefix/${name_new}-${index}"
@@ -383,7 +380,7 @@ Rename() {
 			else
 
 				# if does not exist, rename directly
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "-----------------------"
 					echo "auto-rename: >$path<"
 					echo "mv $path $prefix/${name_new}"
@@ -409,11 +406,11 @@ Rename() {
 			obj="[file]"
 		fi
 
-		if [ "$MANUAL_TOTAL" -ne 0 ]; then
-			percentage=$(( (MANUAL_CURRENT * 100) / MANUAL_TOTAL ))
+		if [ "$manual_total" -ne 0 ]; then
+			percentage=$(( (manual_current * 100) / manual_total ))
 			echo "--------- Manual Renaming: $percentage% -------------"
 		fi
-		((MANUAL_CURRENT++))
+		((manual_current++))
 
 		if Check_Extension "$path" "$name_old"; then
 			local base_name="${name_old%.*}"
@@ -432,7 +429,7 @@ Rename() {
 				done
 
 				# rename with the new unique name
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "manual-rename/extension/exist: >$path<"
 					echo "mv $path $prefix/${base_name_new}-${index}.${extension}"
 				else
@@ -444,7 +441,7 @@ Rename() {
 			else
 
 				# if does not exist, rename directly
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "manual-rename/extension: >$path<"
 					echo "mv $path $prefix/${base_name_new}.${extension}"
 				else
@@ -470,7 +467,7 @@ Rename() {
 				done
 
 				# rename with the new unique name
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "manual-rename/exist: >$path<"
 					echo "mv $path $prefix/${name_new}-${index}"
 				else
@@ -482,7 +479,7 @@ Rename() {
 			else
 
 				# if does not exist, rename directly
-				if [ $DRYRUN -eq 1 ]; then
+				if [ $dryrun -eq 1 ]; then
 					echo "manual-rename: >$path<"
 					echo "mv $path $prefix/${name_new}"
 				else
@@ -505,8 +502,8 @@ Rename() {
 		local name="${path##*/}"
 
 		# choosing the way of renaming: manual / auto
-		if { [ $MANUAL_FILES -eq 1 ] && [ -f "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; } || \
-			{ [ $MANUAL_DIRS -eq 1 ] && [ -d "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; }; then
+		if { [ $manual_files -eq 1 ] && [ -f "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; } || \
+			{ [ $manual_dirs -eq 1 ] && [ -d "$path" ] && [[ "$name" =~ [^a-zA-Z0-9[:punct:][:space:]] ]]; }; then
 
 			Manual_Rename "$path"
 		else
@@ -543,7 +540,7 @@ Filter_Paths_Manual_All() {
 	while IFS= read -r path; do
 		local name=""
 		name=$(basename "$path")
-		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]|$ANTI_SEP"; then
+		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]|$anti_sep"; then
 			echo "$path"
 		fi
 	done
@@ -565,14 +562,14 @@ Find_Files_Auto_Include() {
 	find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'
 }
 
 Find_Dirs_Auto_Include() {
 	find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$ANTI_SEP*" \) \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'
 }
 
@@ -594,7 +591,7 @@ Find_Dirs_Manual_Include() {
 # Common logic branch for non-exclude modes
 Include() {
 
-	# for mix mode: MANUAL_FILES=0 && MANUAL_DIRS=1
+	# for mix mode: manual_files=0 && manual_dirs=1
 	Rename_Files_Auto_Include() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -608,7 +605,7 @@ Include() {
 		done < "$temp_file"
 	}
 
-	# for mix mode: MANUAL_FILES=1 && MANUAL_DIRS=0
+	# for mix mode: manual_files=1 && manual_dirs=0
 	Rename_Dirs_Auto_Include() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -642,7 +639,7 @@ Include() {
 		Find_Files_Auto_Include >> "$temp_file_files"
 		Find_Dirs_Auto_Include | Sort_By_Slashes >> "$temp_file_dirs"
 
-		AUTO_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+		auto_total=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
 
 		# stop async animation process
 		kill $animation_pid 2>/dev/null
@@ -659,7 +656,7 @@ Include() {
 		done < "$temp_file_dirs"
 	}
 
-	# for mix mode: MANUAL_FILES=1 && MANUAL_DIRS=0
+	# for mix mode: manual_files=1 && manual_dirs=0
 	Rename_Files_Manual_Include() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -668,14 +665,14 @@ Include() {
 
 		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file"
 
-		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
-	# for mix mode: MANUAL_FILES=0 && MANUAL_DIRS=1
+	# for mix mode: manual_files=0 && manual_dirs=1
 	Rename_Dirs_Manual_Include() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -684,7 +681,7 @@ Include() {
 
 		Find_Dirs_Manual_Include | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
-		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -711,7 +708,7 @@ Include() {
 		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file_files"
 		Find_Dirs_Manual_Include | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
-		MANUAL_TOTAL=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
+		manual_total=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
 		# stop async animation process
@@ -730,7 +727,7 @@ Include() {
 	}
 
 	# no manual
-	if [ $MANUAL_FILES -eq 0 ] && [ $MANUAL_DIRS -eq 0 ]; then
+	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
 		echo "-----------------------"
 		echo "Renaming tree: '$(pwd)'"
 		Rename_Files_And_Dirs_Auto_Include
@@ -738,7 +735,7 @@ Include() {
 	fi
 
 	# manual renaming dirs
-	if [ $MANUAL_DIRS -eq 1 ] && [ $MANUAL_FILES -eq 0 ]; then
+	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 
 		echo "-----------------------"
 		# start async animation process
@@ -756,7 +753,7 @@ Include() {
 	fi
 
 	# manual renaming files
-	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 0 ]; then
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
 
 		Rename_Files_Manual_Include
 
@@ -775,7 +772,7 @@ Include() {
 	fi
 
 	# manual renaming both (files + dirs)
-	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 1 ]; then
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
 		echo "-----------------------"
 		Rename_Files_And_Dirs_Manual_Include
 	fi
@@ -790,7 +787,7 @@ Only() {
 		if [[ "$name" =~ [A-Z[:space:]_-] ]]; then
 			return 0
 		fi
-		if [ $MANUAL_DIRS -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9] ]]; then
+		if [ $manual_dirs -eq 1 ] && [[ "$name" =~ [^a-zA-Z0-9] ]]; then
 			return 0
 		fi
 		return 1
@@ -804,8 +801,8 @@ Only() {
 
 		if cd "$dir"; then
 			Include
-			AUTO_TOTAL=0
-			AUTO_CURRENT=0
+			auto_total=0
+			auto_current=0
 			cd "$cwd" || { echo "Failed to change directory to '$cwd'"; exit 1; }
 			if Check_Dir_Name "$dir"; then
 				Rename 0 "$dir" || echo "Failed to rename '$dir'"
@@ -849,23 +846,23 @@ Exclude() {
 		exclude_dirs_massage+="'$pattern' "
 	done
 
-	# for mix mode: MANUAL_FILES=0 && MANUAL_DIRS=1
+	# for mix mode: manual_files=0 && manual_dirs=1
 	Rename_Files_Auto_Exclude() {
 		local str_files
 		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | Rename 1
 	}
 
-	# for mix mode: MANUAL_FILES=1 && MANUAL_DIRS=0
+	# for mix mode: manual_files=1 && manual_dirs=0
 	Rename_Dirs_Auto_Exclude() {
 		local str_dirs
 		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | Sort_By_Slashes | Rename 1
 	}
@@ -891,18 +888,18 @@ Exclude() {
 		str_files="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
 -o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files"  >> "$temp_file_files"
 
 		local str_dirs
 		str_dirs="find . \
 -type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$ANTI_SEP*' \) \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | Sort_By_Slashes >> "$temp_file_dirs"
 
-		AUTO_TOTAL=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+		auto_total=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
 
 		# stop async animation process
 		kill $animation_pid 2>/dev/null
@@ -919,7 +916,7 @@ Exclude() {
 		done < "$temp_file_dirs"
 	}
 
-	# for mix mode: MANUAL_FILES=1 && MANUAL_DIRS=0
+	# for mix mode: manual_files=1 && manual_dirs=0
 	Rename_Files_Manual_Exclude() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -933,14 +930,14 @@ Exclude() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_files" | Filter_Paths_Manual_All  >> "$temp_file"
 
-		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
 		done < "$temp_file"
 	}
 
-	# for mix mode: MANUAL_FILES=0 && MANUAL_DIRS=1
+	# for mix mode: manual_files=0 && manual_dirs=1
 	Rename_Dirs_Manual_Exclude() {
 		local temp_file
 		temp_file=$(mktemp)
@@ -954,7 +951,7 @@ Exclude() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
-		MANUAL_TOTAL=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -992,7 +989,7 @@ Exclude() {
 -print0 | xargs -0 -I {} printf '%s\n' '{}'"
 		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
-		MANUAL_TOTAL=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
+		manual_total=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
 		# stop async animation process
@@ -1011,7 +1008,7 @@ Exclude() {
 	}
 
 	# no manual
-	if [ $MANUAL_FILES -eq 0 ] && [ $MANUAL_DIRS -eq 0 ]; then
+	if [ $manual_files -eq 0 ] && [ $manual_dirs -eq 0 ]; then
 		echo "-----------------------"
 		echo "Renaming tree: '$(pwd)' excluding dirs: $exclude_dirs_massage"
 		Rename_Files_And_Dirs_Auto_Exclude
@@ -1019,7 +1016,7 @@ Exclude() {
 	fi
 
 	# manual renaming dirs
-	if [ $MANUAL_DIRS -eq 1 ] && [ $MANUAL_FILES -eq 0 ]; then
+	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 
 		echo "-----------------------"
 		# start async animation process
@@ -1037,7 +1034,7 @@ Exclude() {
 	fi
 
 	# manual renaming files
-	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 0 ]; then
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
 
 		Rename_Files_Manual_Exclude
 
@@ -1056,7 +1053,7 @@ Exclude() {
 	fi
 
 	# manual renaming both (files + dirs)
-	if [ $MANUAL_FILES -eq 1 ] && [ $MANUAL_DIRS -eq 1 ]; then
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 1 ]; then
 		echo "-----------------------"
 		Rename_Files_And_Dirs_Manual_Exclude
 	fi
@@ -1069,70 +1066,70 @@ Exclude() {
 
 case "$1" in
 --dryrun | -n)
-	DRYRUN=1
+	dryrun=1
 	shift
 	;;
 esac
 
 case "$1" in
 --exclude | -e)
-	OPTION=1
+	option=1
 	shift
 	;;
 --only | -o)
-	OPTION=2
+	option=2
 	shift
 	;;
 --files | -f)
-	OPTION=3
-	MANUAL_FILES=1
+	option=3
+	manual_files=1
 	shift
 	;;
 --excludefiles | -ef | -fe)
-	OPTION=31
-	MANUAL_FILES=1
+	option=31
+	manual_files=1
 	shift
 	;;
 --onlyfiles | -of | -fo)
-	OPTION=32
-	MANUAL_FILES=1
+	option=32
+	manual_files=1
 	shift
 	;;
 --dirs | -d)
-	OPTION=4
-	MANUAL_DIRS=1
+	option=4
+	manual_dirs=1
 	shift
 	;;
 --excludedirs | -ed | -de)
-	OPTION=41
-	MANUAL_DIRS=1
+	option=41
+	manual_dirs=1
 	shift
 	;;
 --onlydirs | -od | -do)
-	OPTION=42
-	MANUAL_DIRS=1
+	option=42
+	manual_dirs=1
 	shift
 	;;
 --both | -b)
-	OPTION=5
-	MANUAL_FILES=1
-	MANUAL_DIRS=1
+	option=5
+	manual_files=1
+	manual_dirs=1
 	shift
 	;;
 --excludeboth | -eb | -be)
-	OPTION=51
-	MANUAL_FILES=1
-	MANUAL_DIRS=1
+	option=51
+	manual_files=1
+	manual_dirs=1
 	shift
 	;;
 --onlyboth | -ob | -bo)
-	OPTION=52
-	MANUAL_FILES=1
-	MANUAL_DIRS=1
+	option=52
+	manual_files=1
+	manual_dirs=1
 	shift
 	;;
 --help | -h)
-	OPTION=6
+	option=6
 	shift
 	;;
 --* | -*)
@@ -1146,7 +1143,7 @@ esac
 # ========================================================
 
 # no args
-if [ $OPTION -eq 0 ]; then
+if [ $option -eq 0 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_No_Args "$@" || exit 1
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)'? (y/n): " || exit 1
@@ -1160,7 +1157,7 @@ if [ $OPTION -eq 0 ]; then
 fi
 
 # only
-if [ $OPTION -eq 2 ]; then
+if [ $option -eq 2 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1175,7 +1172,7 @@ if [ $OPTION -eq 2 ]; then
 fi
 
 # exclude
-if [ $OPTION -eq 1 ]; then
+if [ $option -eq 1 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1190,7 +1187,7 @@ if [ $OPTION -eq 1 ]; then
 fi
 
 # files
-if [ $OPTION -eq 3 ]; then
+if [ $option -eq 3 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_No_Args "$@" || exit 1
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each non-ASCII filename? (y/n): " || exit 1
@@ -1204,7 +1201,7 @@ if [ $OPTION -eq 3 ]; then
 fi
 
 # only + files
-if [ $OPTION -eq 32 ]; then
+if [ $option -eq 32 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1219,7 +1216,7 @@ if [ $OPTION -eq 32 ]; then
 fi
 
 # exclude + files
-if [ $OPTION -eq 31 ]; then
+if [ $option -eq 31 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1234,7 +1231,7 @@ if [ $OPTION -eq 31 ]; then
 fi
 
 # dirs
-if [ $OPTION -eq 4 ]; then
+if [ $option -eq 4 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_No_Args "$@" || exit 1
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
@@ -1248,7 +1245,7 @@ if [ $OPTION -eq 4 ]; then
 fi
 
 # only + dirs
-if [ $OPTION -eq 42 ]; then
+if [ $option -eq 42 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1263,7 +1260,7 @@ if [ $OPTION -eq 42 ]; then
 fi
 
 # exclude + dirs
-if [ $OPTION -eq 41 ]; then
+if [ $option -eq 41 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1278,7 +1275,7 @@ if [ $OPTION -eq 41 ]; then
 fi
 
 # both
-if [ $OPTION -eq 5 ]; then
+if [ $option -eq 5 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_No_Args "$@" || exit 1
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory and regular file containing non-ASCII characters in their names? (y/n): " || exit 1
@@ -1292,7 +1289,7 @@ if [ $OPTION -eq 5 ]; then
 fi
 
 # only + both
-if [ $OPTION -eq 52 ]; then
+if [ $option -eq 52 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1307,7 +1304,7 @@ if [ $OPTION -eq 52 ]; then
 fi
 
 # exclude + both
-if [ $OPTION -eq 51 ]; then
+if [ $option -eq 51 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_Arg_Presented "$@" || exit 1
 	Check_Subdir "$@" || exit 1
@@ -1322,7 +1319,7 @@ if [ $OPTION -eq 51 ]; then
 fi
 
 # help
-if [ $OPTION -eq 6 ]; then
+if [ $option -eq 6 ]; then
 	Check_No_More_Opts "$@" || exit 1
 	Check_No_Args "$@" || exit 1
 	Show_Help
