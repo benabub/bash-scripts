@@ -49,6 +49,7 @@ auto_current=0
 dryrun=0
 sep="_"
 anti_sep="-"
+animation_pid=0
 
 # ========================================================
 # terminal restore
@@ -240,14 +241,23 @@ Show_Thinking_Animation() {
 	local message="$1"
 	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 	local i=0
+	(
+		while :; do
+			printf "\r%s %s" "${spinner[i++ % ${#spinner[@]}]}" "$message"
+			sleep 0.1
+			# Stop animation when the parent process finishes
+			kill -0 "$PPID" 2>/dev/null || break
+		done
+	) &
+	animation_pid=$!
+}
 
-	# tput civis # Hide the cursor
-	while :; do
-		printf "\r%s %s" "${spinner[i++ % ${#spinner[@]}]}" "$message"
-		sleep 0.1
-		# Stop animation when the parent process finishes
-		kill -0 "$PPID" 2>/dev/null || break
-	done
+Stop_Thinking_Animation() {
+	echo "completed"
+	if [ "$animation_pid" -ne 0 ]; then
+		kill "$animation_pid" 2>/dev/null
+		animation_pid=0
+	fi
 }
 
 # Takes 1 arg: old_str; echo new_str
@@ -633,8 +643,7 @@ Include() {
 		trap 'rm -f "$temp_file_dirs"' EXIT
 
 		# start async animation process
-		Show_Thinking_Animation "Counting items..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Counting items..."
 
 		Find_Files_Auto_Include >> "$temp_file_files"
 		Find_Dirs_Auto_Include | Sort_By_Slashes >> "$temp_file_dirs"
@@ -642,10 +651,7 @@ Include() {
 		auto_total=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
 
 		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -702,8 +708,7 @@ Include() {
 		trap 'rm -f "$temp_file_dirs"' EXIT
 
 		# start async animation process
-		Show_Thinking_Animation "Counting items..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Counting items..."
 
 		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file_files"
 		Find_Dirs_Manual_Include | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
@@ -712,10 +717,7 @@ Include() {
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
 		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -738,15 +740,9 @@ Include() {
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 
 		echo "-----------------------"
-		# start async animation process
-		Show_Thinking_Animation "Automatically renaming files..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Automatically renaming files..."
 		Rename_Files_Auto_Include
-		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		Rename_Dirs_Manual_Include
 		return
@@ -758,15 +754,9 @@ Include() {
 		Rename_Files_Manual_Include
 
 		echo "-----------------------"
-		# start async animation process
-		Show_Thinking_Animation "Automatically renaming directories..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Automatically renaming directories..."
 		Rename_Dirs_Auto_Include
-		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		return
 	fi
@@ -881,8 +871,7 @@ Exclude() {
 		trap 'rm -f "$temp_file_dirs"' EXIT
 
 		# start async animation process
-		Show_Thinking_Animation "Counting items..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Counting items..."
 
 		local str_files
 		str_files="find . \
@@ -902,10 +891,7 @@ Exclude() {
 		auto_total=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
 
 		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -972,8 +958,7 @@ Exclude() {
 		trap 'rm -f "$temp_file_dirs"' EXIT
 
 		# start async animation process
-		Show_Thinking_Animation "Counting items..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Counting items..."
 
 		local str_files
 		str_files="find . \
@@ -993,10 +978,7 @@ Exclude() {
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
 		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -1019,15 +1001,9 @@ Exclude() {
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 
 		echo "-----------------------"
-		# start async animation process
-		Show_Thinking_Animation "Automatically renaming files..." &
-		animation_pid=$!
+		Show_Thinking_Animation "Automatically renaming files..."
 		Rename_Files_Auto_Exclude
-		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		Rename_Dirs_Manual_Exclude
 		return
@@ -1039,15 +1015,9 @@ Exclude() {
 		Rename_Files_Manual_Exclude
 
 		echo "-----------------------"
-		# start async animation process
 		Show_Thinking_Animation "Automatically renaming directories..." &
-		animation_pid=$!
 		Rename_Dirs_Auto_Exclude
-		# stop async animation process
-		kill $animation_pid 2>/dev/null
-		# finish animation process message
-		echo "completed."
-		# tput cnorm # Restore the cursor
+		Stop_Thinking_Animation
 
 		return
 	fi
