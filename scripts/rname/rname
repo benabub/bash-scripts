@@ -55,7 +55,7 @@ animation_pid=0
 # terminal restore
 # ========================================================
 
-# TODO: interrapting while Show_Thinking_Animation() - no term cursor restore
+# TODO: interrapting while Show_Thinking_Animation() - no terminal cursor restore
 
 original_stty=""
 interrupted=false
@@ -803,21 +803,42 @@ Only() {
 	done
 }
 
-# Find_Files_Auto_Exclude() {
-#
-# }
-#
-# Find_Dirs_Auto_Exclude() {
-#
-# }
-#
-# Find_Files_Manual_Exclude() {
-#
-# }
-#
-# Find_Dirs_Manual_Exclude() {
-#
-# }
+Find_Files_Auto_Exclude() {
+	local str_files
+	str_files="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_files"
+}
+
+Find_Dirs_Auto_Exclude() {
+	local str_dirs
+	str_dirs="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+-o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_dirs"
+}
+
+Find_Files_Manual_Exclude() {
+	local str_files
+	str_files="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+-o -type f ! \( -name '.*' -o -name '~*' \) \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_files"
+}
+
+Find_Dirs_Manual_Exclude() {
+	local str_dirs
+	str_dirs="find . \
+-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+-o -type d \
+-print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	eval "$str_dirs"
+}
 
 # Logic branch for exclude mode
 Exclude() {
@@ -838,23 +859,12 @@ Exclude() {
 
 	# for mix mode: manual_files=0 && manual_dirs=1
 	Rename_Files_Auto_Exclude() {
-		local str_files
-		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files" | Rename 1
+		Find_Files_Auto_Exclude | Rename 1
 	}
 
 	# for mix mode: manual_files=1 && manual_dirs=0
 	Rename_Dirs_Auto_Exclude() {
-		local str_dirs
-		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | Sort_By_Slashes | Rename 1
+		Find_Dirs_Auto_Exclude | Sort_By_Slashes | Rename 1
 	}
 
 	# for no manual mode
@@ -873,20 +883,8 @@ Exclude() {
 		# start async animation process
 		Show_Thinking_Animation "Counting items..."
 
-		local str_files
-		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files"  >> "$temp_file_files"
-
-		local str_dirs
-		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | Sort_By_Slashes >> "$temp_file_dirs"
+		Find_Files_Auto_Exclude  >> "$temp_file_files"
+		Find_Dirs_Auto_Exclude | Sort_By_Slashes >> "$temp_file_dirs"
 
 		auto_total=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
 
@@ -909,12 +907,7 @@ Exclude() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		local str_files
-		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files" | Filter_Paths_Manual_All  >> "$temp_file"
+		Find_Files_Manual_Exclude | Filter_Paths_Manual_All  >> "$temp_file"
 
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
@@ -930,12 +923,7 @@ Exclude() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		local str_dirs
-		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
+		Find_Dirs_Manual_Exclude | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
 
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
 
@@ -960,19 +948,8 @@ Exclude() {
 		# start async animation process
 		Show_Thinking_Animation "Counting items..."
 
-		local str_files
-		str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_files" | Filter_Paths_Manual_All >> "$temp_file_files"
-
-		local str_dirs
-		str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
-		eval "$str_dirs" | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
+		Find_Files_Manual_Exclude | Filter_Paths_Manual_All >> "$temp_file_files"
+		Find_Dirs_Manual_Exclude | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file_dirs"
 
 		manual_total=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
@@ -1015,7 +992,7 @@ Exclude() {
 		Rename_Files_Manual_Exclude
 
 		echo "-----------------------"
-		Show_Thinking_Animation "Automatically renaming directories..." &
+		Show_Thinking_Animation "Automatically renaming directories..."
 		Rename_Dirs_Auto_Exclude
 		Stop_Thinking_Animation
 
