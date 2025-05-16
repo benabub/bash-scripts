@@ -50,6 +50,32 @@ DRYRUN=0
 SEP="_"
 ANTI_SEP="-"
 
+
+# ========================================================
+# terminal restore
+# ========================================================
+
+original_stty=""
+interrupted=false
+
+cleanup() {
+	# Восстановление настроек терминала
+	[[ "$original_stty" ]] && stty "$original_stty" 2>/dev/null
+	tput cnorm 2>/dev/null  # Восстановление курсора
+
+	# Если прервано сигналом - завершаем с кодом 130
+	if [[ "$interrupted" == true ]]; then
+		exit 130
+	fi
+}
+
+# Сохраняем настройки терминала
+original_stty=$(stty -g 2>/dev/null) || echo "Warning: Failed to save terminal settings" >&2
+
+# Настраиваем обработчики сигналов
+trap 'interrupted=true; cleanup' INT TERM HUP
+trap 'cleanup' EXIT
+
 # ========================================================
 # functions
 # ========================================================
@@ -205,12 +231,20 @@ Check_Extension() {
 	fi
 }
 
+Disable_Input() {
+	tput civis  # hide cursor
+}
+
+Enable_Input() {
+	tput cnorm  # restore cursor
+}
+
 Show_Thinking_Animation() {
 	local message="$1"
 	local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 	local i=0
 
-	tput civis # Hide the cursor
+	# tput civis # Hide the cursor
 	while :; do
 		printf "\r%s %s" "${spinner[i++ % ${#spinner[@]}]}" "$message"
 		sleep 0.1
@@ -277,8 +311,8 @@ Rename() {
 		if [ "$show_progress" -eq 1 ] && [ $DRYRUN -eq 0 ] && [ $MANUAL_DIRS -eq 0 ] && [ $MANUAL_FILES -eq 0 ]; then
 			((AUTO_CURRENT++))
 
-		printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((AUTO_CURRENT * 40 / AUTO_TOTAL))))" $((AUTO_CURRENT * 100 / AUTO_TOTAL))
-		[ $AUTO_CURRENT -eq $AUTO_TOTAL ] && { printf "\n"; tput cnorm; }
+			printf "\rRenaming Progress: [%-40s] %d%%" "$(printf '#%.0s' $(seq 1 $((AUTO_CURRENT * 40 / AUTO_TOTAL))))" $((AUTO_CURRENT * 100 / AUTO_TOTAL))
+			[ $AUTO_CURRENT -eq $AUTO_TOTAL ] && printf "\n"
 		fi
 
 		if Check_Extension "$path" "$name_old"; then
@@ -614,7 +648,7 @@ Include() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -684,7 +718,7 @@ Include() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -715,7 +749,7 @@ Include() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		Rename_Dirs_Manual_Include
 		return
@@ -735,7 +769,7 @@ Include() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		return
 	fi
@@ -874,7 +908,7 @@ Exclude() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -965,7 +999,7 @@ Exclude() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -996,7 +1030,7 @@ Exclude() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		Rename_Dirs_Manual_Exclude
 		return
@@ -1016,7 +1050,7 @@ Exclude() {
 		kill $animation_pid 2>/dev/null
 		# finish animation process message
 		echo "completed."
-		tput cnorm # Restore the cursor
+		# tput cnorm # Restore the cursor
 
 		return
 	fi
@@ -1118,7 +1152,9 @@ if [ $OPTION -eq 0 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)'? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Include
+	Enable_Input
 
 	exit 0
 fi
@@ -1131,7 +1167,9 @@ if [ $OPTION -eq 2 ]; then
 	Ask_Confirm "Are you sure you want to rename all directory trees in the selected folders, including their names? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Only "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1144,7 +1182,9 @@ if [ $OPTION -eq 1 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', excluding the selected folders and their contents? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Exclude "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1156,7 +1196,9 @@ if [ $OPTION -eq 3 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each non-ASCII filename? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Include
+	Enable_Input
 	
 	exit 0
 fi
@@ -1169,7 +1211,9 @@ if [ $OPTION -eq 32 ]; then
 	Ask_Confirm "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Only "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1182,7 +1226,9 @@ if [ $OPTION -eq 31 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each regular file containing non-ASCII characters? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Exclude "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1194,7 +1240,9 @@ if [ $OPTION -eq 4 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Include
+	Enable_Input
 	
 	exit 0
 fi
@@ -1207,7 +1255,9 @@ if [ $OPTION -eq 42 ]; then
 	Ask_Confirm "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Only "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1220,7 +1270,9 @@ if [ $OPTION -eq 41 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory containing non-ASCII characters in its name? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Exclude "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1232,7 +1284,9 @@ if [ $OPTION -eq 5 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)', with manual renaming required for each directory and regular file containing non-ASCII characters in their names? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Include
+	Enable_Input
 	
 	exit 0
 fi
@@ -1245,7 +1299,9 @@ if [ $OPTION -eq 52 ]; then
 	Ask_Confirm "Are you sure you want to rename all directory trees in the selected folders (including their names), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Only "$@"
+	Enable_Input
 	
 	exit 0
 fi
@@ -1258,7 +1314,9 @@ if [ $OPTION -eq 51 ]; then
 	Ask_Confirm "Are you sure you want to rename the entire directory tree under '$(pwd)' (excluding selected folders and their contents), with manual renaming required for each directory and file containing non-ASCII characters in their names? (y/n): " || exit 1
 	Ask_Sep || exit 1
 
+	Disable_Input
 	Exclude "$@"
+	Enable_Input
 	
 	exit 0
 fi
