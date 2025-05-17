@@ -542,7 +542,7 @@ Sort_By_Slashes() {
 		# Count '/' symbols and print count and line
 		count=$(grep -o "/" <<< "$line" | wc -l)
 		echo "$count $line"
-	done | sort -nr | awk '{$1=""; print substr($0, 2)}'
+	done | sort -nr | cut -d' ' -f2-
 }
 
 # Filter paths in pipelines by RE conditions in basename
@@ -550,9 +550,13 @@ Filter_Paths_Manual_All() {
 	while IFS= read -r path; do
 		local name=""
 		name=$(basename "$path")
-		if echo "$name" | grep -qP "[[:space:]]|[[:upper:]]|[^\x00-\x7F]|$anti_sep"; then
+
+		if echo "$name" | grep -qP \
+			'([[:space:]]|[[:upper:]]|[^\x00-\x7F]|'"$anti_sep"'|--|__|  )'
+		then
 			echo "$path"
 		fi
+
 	done
 }
 
@@ -570,31 +574,45 @@ Filter_Paths_Manual_Only() {
 
 Find_Files_Auto_Include() {
 	find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'
+	-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+	-o -type f ! \( -name '.*' -o -name '~*' \) \
+	-a \( \
+		-name '* *' -o \
+		-name '*[[:upper:]]*' -o \
+		-name "*$anti_sep*" -o \
+		-name '*--*' -o \
+		-name '*__*' -o \
+		-name '*  *' \
+	\) \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'
 }
 
 Find_Dirs_Auto_Include() {
 	find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name "*$anti_sep*" \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'
+	-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+	-o -type d \( \
+		-name '* *' -o \
+		-name '*[[:upper:]]*' -o \
+		-name "*$anti_sep*" -o \
+		-name '*--*' -o \
+		-name '*__*' -o \
+		-name '*  *' \
+	\) \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'
 }
 
 Find_Files_Manual_Include() {
 	find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'
+	-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+	-o -type f ! \( -name '.*' -o -name '~*' \) \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'
 }
 
 Find_Dirs_Manual_Include() {
 	find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}'
+	-type d \( -name '.*' ! -name '.' -o -name '~*' \) -prune \
+	-o -type d \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'
 }
 
 
@@ -661,6 +679,10 @@ Include() {
 			Rename 1 "$line"
 		done < "$temp_file_dirs"
 	}
+
+	# For next 3 functions: Filter_Paths_Manual_{ All | Only } added because of find command:
+	# its not good with non ASKII, that is why need RE,
+	# and Find_{ Files | Dirs }_Manual_{ Include | Exclude } -> only pre-filters
 
 	# for mix mode: manual_files=1 && manual_dirs=0
 	Rename_Files_Manual_Include() {
