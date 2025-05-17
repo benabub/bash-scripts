@@ -828,37 +828,51 @@ Only() {
 Find_Files_Auto_Exclude() {
 	local str_files
 	str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--a \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+	-o -type f ! \( -name '.*' -o -name '~*' \) \
+	-a \( \
+		-name '* *' -o \
+		-name '*[[:upper:]]*' -o \
+		-name '*$anti_sep*' -o \
+		-name '*--*' -o \
+		-name '*__*' -o \
+		-name '*  *' \
+	\) \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_files"
 }
 
 Find_Dirs_Auto_Exclude() {
 	local str_dirs
 	str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \( -name '* *' -o -name '*[[:upper:]]*' -o -name '*$anti_sep*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+	-o -type d \( \
+		-name '* *' -o \
+		-name '*[[:upper:]]*' -o \
+		-name '*$anti_sep*' -o \
+		-name '*--*' -o \
+		-name '*__*' -o \
+		-name '*  *' \
+	\) \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_dirs"
 }
 
 Find_Files_Manual_Exclude() {
 	local str_files
 	str_files="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type f ! \( -name '.*' -o -name '~*' \) \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+	-o -type f ! \( -name '.*' -o -name '~*' \) \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_files"
 }
 
 Find_Dirs_Manual_Exclude() {
 	local str_dirs
 	str_dirs="find . \
--type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
--o -type d \
--print0 | xargs -0 -I {} printf '%s\n' '{}'"
+	-type d \( -name '.*' ! -name '.' -o -name '~*' $exclude_dirs_find\) -prune \
+	-o -type d \
+	-print0 | xargs -0 -I {} printf '%s\n' '{}'"
 	eval "$str_dirs"
 }
 
