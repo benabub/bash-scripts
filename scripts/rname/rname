@@ -691,13 +691,28 @@ Include() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
-		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file"
+		# start async animation process
+		Show_Thinking_Animation "Counting items..."
 
+		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file"
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+
+		Stop_Thinking_Animation
+
+		if [[ $manual_total -eq 0 ]]; then
+			echo "No items for manual renaming found"
+			echo "-----------------------"
+			Show_Thinking_Animation "Automatically renaming files..."
+		fi
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
 		done < "$temp_file"
+
+		if [[ $manual_total -eq 0 ]]; then
+			Stop_Thinking_Animation
+		fi
+
 	}
 
 	# for mix mode: manual_files=0 && manual_dirs=1
@@ -783,6 +798,7 @@ Include() {
 	# manual renaming files
 	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
 
+		echo "-----------------------"
 		Rename_Files_Manual_Include
 
 		echo "-----------------------"
