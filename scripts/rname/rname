@@ -693,10 +693,8 @@ Include() {
 
 		# start async animation process
 		Show_Thinking_Animation "Counting files to be renamed..."
-
 		Find_Files_Manual_Include | Filter_Paths_Manual_All >> "$temp_file"
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
-
 		Stop_Thinking_Animation
 
 		if [[ $manual_total -eq 0 ]]; then
@@ -709,10 +707,7 @@ Include() {
 			Rename 1 "$line"
 		done < "$temp_file"
 
-		if [[ $manual_total -eq 0 ]]; then
-			Stop_Thinking_Animation
-		fi
-
+		[[ $manual_total -eq 0 ]] && Stop_Thinking_Animation
 	}
 
 	# for mix mode: manual_files=0 && manual_dirs=1
@@ -724,11 +719,8 @@ Include() {
 
 		# start async animation process
 		Show_Thinking_Animation "Counting directories to be renamed..."
-
 		Find_Dirs_Manual_Include | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
-
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
-
 		Stop_Thinking_Animation
 
 		if [[ $manual_total -eq 0 ]]; then
@@ -741,9 +733,7 @@ Include() {
 			Rename 1 "$line"
 		done < "$temp_file"
 
-		if [[ $manual_total -eq 0 ]]; then
-			Stop_Thinking_Animation
-		fi
+		[[ $manual_total -eq 0 ]] && Stop_Thinking_Animation
 	}
 
 	# for both manual mode
@@ -777,9 +767,7 @@ Include() {
 		# stop async animation process
 		Stop_Thinking_Animation
 
-		if [[ $manual_total -eq 0 ]]; then
-			echo "No items for manual renaming found"
-		fi
+		[[ $manual_total -eq 0 ]] && echo "No items for manual renaming found"
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
@@ -798,6 +786,19 @@ Include() {
 		return
 	fi
 
+	# manual renaming files
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
+
+		echo "-----------------------"
+		Rename_Files_Manual_Include
+		echo "-----------------------"
+		Show_Thinking_Animation "Automatically renaming directories..."
+		Rename_Dirs_Auto_Include
+		Stop_Thinking_Animation
+
+		return
+	fi
+
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 
@@ -807,20 +808,6 @@ Include() {
 		Stop_Thinking_Animation
 		echo "-----------------------"
 		Rename_Dirs_Manual_Include
-		return
-	fi
-
-	# manual renaming files
-	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
-
-		echo "-----------------------"
-		Rename_Files_Manual_Include
-
-		echo "-----------------------"
-		Show_Thinking_Animation "Automatically renaming directories..."
-		Rename_Dirs_Auto_Include
-		Stop_Thinking_Animation
-
 		return
 	fi
 
@@ -984,13 +971,23 @@ Exclude() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
+		# start async animation process
+		Show_Thinking_Animation "Counting files to be renamed..."
 		Find_Files_Manual_Exclude | Filter_Paths_Manual_All  >> "$temp_file"
-
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+		Stop_Thinking_Animation
+
+		if [[ $manual_total -eq 0 ]]; then
+			echo "No items for manual renaming found"
+			echo "-----------------------"
+			Show_Thinking_Animation "Automatically renaming files..."
+		fi
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
 		done < "$temp_file"
+
+		[[ $manual_total -eq 0 ]] && Stop_Thinking_Animation
 	}
 
 	# for mix mode: manual_files=0 && manual_dirs=1
@@ -1051,6 +1048,19 @@ Exclude() {
 		return
 	fi
 
+	# manual renaming files
+	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
+
+		echo "-----------------------"
+		Rename_Files_Manual_Exclude
+		echo "-----------------------"
+		Show_Thinking_Animation "Automatically renaming directories..."
+		Rename_Dirs_Auto_Exclude
+		Stop_Thinking_Animation
+
+		return
+	fi
+
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
 
@@ -1060,19 +1070,6 @@ Exclude() {
 		Stop_Thinking_Animation
 
 		Rename_Dirs_Manual_Exclude
-		return
-	fi
-
-	# manual renaming files
-	if [ $manual_files -eq 1 ] && [ $manual_dirs -eq 0 ]; then
-
-		Rename_Files_Manual_Exclude
-
-		echo "-----------------------"
-		Show_Thinking_Animation "Automatically renaming directories..."
-		Rename_Dirs_Auto_Exclude
-		Stop_Thinking_Animation
-
 		return
 	fi
 
