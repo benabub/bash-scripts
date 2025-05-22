@@ -253,6 +253,7 @@ Show_Thinking_Animation() {
 }
 
 Stop_Thinking_Animation() {
+	sleep 0.2
 	echo "completed"
 	if [ "$animation_pid" -ne 0 ]; then
 		kill "$animation_pid" 2>/dev/null
@@ -997,13 +998,23 @@ Exclude() {
 		# remove temp file on exit:
 		trap 'rm -f "$temp_file"' EXIT
 
+		# start async animation process
+		Show_Thinking_Animation "Counting directories to be renamed..."
 		Find_Dirs_Manual_Exclude | Filter_Paths_Manual_All | Sort_By_Slashes >> "$temp_file"
-
 		manual_total=$(Filter_Paths_Manual_Only < "$temp_file" | wc -l)
+		Stop_Thinking_Animation
+
+		if [[ $manual_total -eq 0 ]]; then
+			echo "No items for manual renaming found"
+			echo "-----------------------"
+			Show_Thinking_Animation "Automatically renaming directories..."
+		fi
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
 		done < "$temp_file"
+
+		[[ $manual_total -eq 0 ]] && Stop_Thinking_Animation
 	}
 
 	# for both manual mode
@@ -1063,12 +1074,11 @@ Exclude() {
 
 	# manual renaming dirs
 	if [ $manual_dirs -eq 1 ] && [ $manual_files -eq 0 ]; then
-
 		echo "-----------------------"
 		Show_Thinking_Animation "Automatically renaming files..."
 		Rename_Files_Auto_Exclude
 		Stop_Thinking_Animation
-
+		echo "-----------------------"
 		Rename_Dirs_Manual_Exclude
 		return
 	fi
