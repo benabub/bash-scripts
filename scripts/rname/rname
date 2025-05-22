@@ -1039,8 +1039,16 @@ Exclude() {
 		manual_total=$(( $(Filter_Paths_Manual_Only < "$temp_file_files" | wc -l) + \
 			$(Filter_Paths_Manual_Only < "$temp_file_dirs" | wc -l) ))
 
+		if [[ $manual_total -eq 0 ]]; then
+			manual_files=0
+			manual_dirs=0
+			auto_total=$(( $(wc -l < "$temp_file_dirs") + $(wc -l < "$temp_file_files") ))
+		fi
+
 		# stop async animation process
 		Stop_Thinking_Animation
+
+		[[ $manual_total -eq 0 ]] && echo "No items for manual renaming found"
 
 		while IFS= read -r line; do
 			Rename 1 "$line"
