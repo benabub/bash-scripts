@@ -1,6 +1,6 @@
 # Bash Scripts
 
-Custom commands for UNIX-like shells.
+Custom commands (scripts) for POSIX-compliant shells (e.g., Bash, Zsh; not for fish).
 
 ## List of Scripts
 
