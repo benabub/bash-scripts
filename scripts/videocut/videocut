@@ -1,0 +1,116 @@
+#!/bin/bash
+set -euo pipefail
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+
+
+# ========================================================
+# FUNCTIONS
+# ========================================================
+
+# Takes 1 arg: object name
+Check_Extension() {
+	local name="$1"
+	local regex='^.+\.[a-zA-Z0-9\-]+$'
+	if [[ "$name" =~ $regex ]]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+cleanup() {
+    rm -f particulipto_*.mp4 listemalissimo.txt 2>/dev/null
+}
+
+# ffmpeg check
+run_ffmpeg() {
+    if ! ffmpeg -nostdin -y "$@"; then
+        echo "Error: ffmpeg command failed: $*"
+        cleanup
+        exit 1
+    fi
+}
+
+# ========================================================
+# SCRIPT
+# ========================================================
+
+input_video_file=$1
+time_codes=$2
+
+if [ ! -f "$input_video_file" ]; then
+    echo "Error: Input video file not found: $input_video_file"
+    exit 1
+fi
+
+if [ ! -f "$time_codes" ]; then
+    echo "Error: Time codes file not found: $time_codes"
+    exit 1
+fi
+
+if ! command -v ffmpeg &> /dev/null; then
+    echo "Error: ffmpeg is not installed"
+    exit 1
+fi
+
+# ------------------------------------------
+# forming output file name
+# ------------------------------------------
+
+if Check_Extension "$input_video_file"; then
+	extension=".${input_video_file##*.}"
+else
+	extension=""
+fi
+
+if [ -z "$3" ]; then
+	output_video_file="video_output$extension"
+else
+	output_video_file="$3$extension"
+fi
+
+# ------------------------------------------
+# creating output file
+# ------------------------------------------
+
+cp -f "$input_video_file" "$output_video_file" || ( echo "Error: cannot copy $input_video_file"; exit 1 )
+
+# ------------------------------------------
+# temp file for ffmpeg -f concat command
+# ------------------------------------------
+
+printf "file '%s'\n" "particulipto_1.mp4" "particulipto_2.mp4" > listemalissimo.txt
+
+# ------------------------------------------
+# cleanup temps
+# ------------------------------------------
+
+trap cleanup EXIT INT TERM
+
+# ------------------------------------------
+# reading timecodes recursevely - working cycle
+# ------------------------------------------
+
+tac "$time_codes" | while read -r line; do
+
+	# left emty lines
+	[[ -z "$line" ]] && continue
+
+	# get data from line
+	start_time=$(echo "$line" | awk '{print $1}')
+	end_time=$(echo "$line" | awk '{print $2}')
+
+	if [[ "$start_time" == "None" || "$start_time" == "none" || "$start_time" == "False" || "$start_time" == "false" ]]; then
+		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy "$output_video_file"
+
+	elif [[ "$end_time" == "None" || "$end_time" == "none" || "$end_time" == "False" || "$end_time" == "false" ]]; then
+		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy "$output_video_file"
+	else
+		run_ffmpeg -i "$output_video_file" -to "$end_time" -c copy particulipto_1.mp4
+		run_ffmpeg -i "$output_video_file" -ss "$start_time" -c copy particulipto_2.mp4
+		run_ffmpeg -f concat -safe 0 -i listemalissimo.txt -c copy "$output_video_file"
+	fi
+done
