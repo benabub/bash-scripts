@@ -27,11 +27,11 @@ cleanup() {
 
 # ffmpeg check
 run_ffmpeg() {
-    if ! ffmpeg -nostdin -y "$@"; then
-        echo "Error: ffmpeg command failed: $*"
-        cleanup
-        exit 1
-    fi
+	if ! ffmpeg -nostdin -y "$@"; then
+		echo "Error: ffmpeg command failed: $*"
+		cleanup
+		exit 1
+	fi
 }
 
 # ========================================================
@@ -104,13 +104,16 @@ tac "$time_codes" | while read -r line; do
 	end_time=$(echo "$line" | awk '{print $2}')
 
 	if [[ "$start_time" == "None" || "$start_time" == "none" || "$start_time" == "False" || "$start_time" == "false" ]]; then
-		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy "$output_video_file"
+		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy temp_file.mp4
+		mv temp_file.mp4 "$output_video_file"
 
 	elif [[ "$end_time" == "None" || "$end_time" == "none" || "$end_time" == "False" || "$end_time" == "false" ]]; then
-		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy "$output_video_file"
+		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy temp_file.mp4
+		mv temp_file.mp4 "$output_video_file"
 	else
-		run_ffmpeg -i "$output_video_file" -to "$end_time" -c copy particulipto_1.mp4
-		run_ffmpeg -i "$output_video_file" -ss "$start_time" -c copy particulipto_2.mp4
-		run_ffmpeg -f concat -safe 0 -i listemalissimo.txt -c copy "$output_video_file"
+		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy particulipto_1.mp4
+		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy particulipto_2.mp4
+		run_ffmpeg -f concat -safe 0 -i listemalissimo.txt -c copy temp_file.mp4
+		mv temp_file.mp4 "$output_video_file"
 	fi
 done
