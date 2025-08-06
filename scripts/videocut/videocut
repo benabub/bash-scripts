@@ -9,7 +9,7 @@ set -euo pipefail
 # It offers key advantages over GUI editors like Kdenlive:
 # - Lossless processing – Unlike Kdenlive, which requires re-encoding,
 #   this script performs lossless cutting (supports MP4, MOV, MKV, AVI, WMV, FLV, WebM).
-#   No-rendering ensures output files are always smaller.
+#   No-rendering ensures output files are always smaller plus fast processing.
 # - Format flexibility: Works natively with your source format without conversion.
 #
 # Timecode Specifications:
@@ -55,6 +55,10 @@ fix_time_format() {
 	# check 00:00:00:00
 	if [[ $time_str =~ ^([0-9]{2}:){3}[0-9]{2}$ ]]; then
 		echo "${time_str%:*}.${time_str##*:}"
+
+	# check 00:00:00
+	elif [[ $time_str =~ ^([0-9]{2}:){2}[0-9]{2}$ ]]; then
+		echo "$time_str"
 
 	# check 00:00:00.00
 	elif [[ $time_str =~ ^([0-9]{2}:){2}[0-9]{2}\.[0-9]{2}$ ]]; then
@@ -102,7 +106,8 @@ else
 	extension=""
 fi
 
-if [ -z "$3" ]; then
+# if [ -z "$3" ]; then
+if [ -z "${3:-}" ]; then
 	output_video_file="video_output$extension"
 else
 	output_video_file="$3$extension"
