@@ -5,6 +5,21 @@ set -euo pipefail
 # FUNCTIONAL OVERVIEW
 # ========================================================
 
+# This script removes unwanted video segments based on provided timecodes.
+# It offers key advantages over GUI editors like Kdenlive:
+# - Lossless processing – Unlike Kdenlive, which requires re-encoding,
+#   this script performs lossless cutting (supports MP4, MOV, MKV, AVI, WMV, FLV, WebM).
+#   No-rendering ensures output files are always smaller.
+# - Format flexibility: Works natively with your source format without conversion.
+#
+# Timecode Specifications:
+# - Plaintext file (with/without extension).
+# - Each line contains space-separated timecode pairs.
+# - Accepted formats: 00:00:00 | 00:00:00.00 | 00:00:00:00.
+# - Ordered top-to-bottom.
+# - Use `None` | `none` | `False` | `false` when cutting from start/to end.
+#
+# Requirement: FFmpeg must be installed.
 
 # ========================================================
 # FUNCTIONS
