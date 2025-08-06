@@ -19,7 +19,7 @@ set -euo pipefail
 # - Ordered top-to-bottom.
 # - Use `None` | `none` | `False` | `false` when cutting from start/to end.
 #
-# Requirement: FFmpeg must be installed.
+# Requirement: ffmpeg must be installed.
 
 # ========================================================
 # FUNCTIONS
