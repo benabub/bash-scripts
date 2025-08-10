@@ -1,0 +1,78 @@
+#!/bin/bash
+set -euo pipefail
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+
+# ========================================================
+# FUNCTIONS
+# ========================================================
+
+# Takes 1 arg: object name
+Check_Extension() {
+	local name="$1"
+	local regex='^.+\.[a-zA-Z0-9\-]+$'
+	if [[ "$name" =~ $regex ]]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+cleanup() {
+    rm -f listemalissimo.txt 2>/dev/null
+}
+
+# ffmpeg check
+run_ffmpeg() {
+	if ! ffmpeg -nostdin -y "$@"; then
+		echo "Error: ffmpeg command failed: $*"
+		cleanup
+		exit 1
+	fi
+}
+
+# ========================================================
+# SCRIPT
+# ========================================================
+
+if [ ! -f "$2" ]; then
+    echo "Error: command need at least 2 video files as arguments"
+    exit 1
+fi
+
+if ! command -v ffmpeg &> /dev/null; then
+    echo "Error: ffmpeg is not installed"
+    exit 1
+fi
+
+# ------------------------------------------
+# forming output file name
+# ------------------------------------------
+
+if Check_Extension "$1"; then
+	extension=".${1##*.}"
+else
+	extension=""
+fi
+
+output_video_file="video_output$extension"
+
+# ------------------------------------------
+# temp file for ffmpeg -f concat command
+# ------------------------------------------
+
+printf "file '%s'\n" "$@" > listemalissimo.txt
+
+# ------------------------------------------
+# cleanup temps
+# ------------------------------------------
+
+trap cleanup EXIT INT TERM
+
+# ------------------------------------------
+# working command
+# ------------------------------------------
+
+run_ffmpeg -f concat -safe 0 -i listemalissimo.txt -c copy "$output_video_file"
