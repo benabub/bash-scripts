@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+
+# This script converts media files to OPUS format while
+# preserving video streams and converting audio to 32k Opus.
+#
+# INPUT: Single media file (any format supported by ffmpeg)
+# OUTPUT: File with same name but .opus extension
+
+# ========================================================
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <filename>"
+    echo "This command requires exactly one argument."
+    exit 1
+fi
+
+filename_full="$1"
+
+# check input file
+if [[ ! -f "$filename_full" ]]; then
+    echo "Error: File '$filename_full' does not exist."
+    exit 1
+fi
+
+# extract filename_clean
+if [[ "$filename_full" == *.* ]]; then
+    filename_clean="${filename_full%.*}"
+else
+    filename_clean="$filename_full"
+fi
+
+# check output file
+if [[ -f "$filename_clean.opus" ]]; then
+    echo "Error: '$filename_clean.opus' already exists."
+    exit 1
+fi
+
+# convert
+ffmpeg -i "$filename_full" -c:v copy -c:a libopus -b:a 32k "$filename_clean.opus"
