@@ -20,7 +20,7 @@ Custom commands (scripts) for POSIX-compliant shells (e.g., Bash, Zsh; not for f
    sudo chmod +x path/to/script
    ```
 
-3. Add the folder containing the script to your `$PATH` variable if you want to use the script as a regular shell command. Note: if you plan to call the script directly (e.g., `exec ~/path/to/script`), this step is not required.
+3. Add the folder containing the script to your `$PATH` variable if you want to use the script as a regular shell command. Note: if you plan to call the script directly (e.g., `~/path/to/script`), this step is not required.
 
 ### Adding the Directory with Script to the `$PATH` Variable Permanently
 
@@ -33,8 +33,8 @@ Locate a line similar to this:
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 ```
 
-Add your directory to the line:
+Add a separate line for each script's dir (or one if you put several scripts together) above it:
 
 ```bash
-export PATH=/your/directory:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+export PATH=/path/to/directory/with/script[s]:$PATH
 ```
