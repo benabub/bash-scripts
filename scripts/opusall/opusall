@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+
+# This script converts all media files in current directory
+# to OPUS format while preserving video streams and converting
+# audio to 32k Opus.
+#
+# PROCESS: All files in current working directory that don't
+#          have .opus extension will be converted
+# OUTPUT: Files with same names but .opus extension
+
+# ========================================================
+# vars
+# ========================================================
+
+converted_count=0
+skipped_count=0
+failed_count=0
+animation_pid=0
+
+# ========================================================
+# functions
+# ========================================================
+
+handle_interrupt() {
+    echo
+    echo "Received interrupt signal. Stopping..."
+    Stop_Thinking_Animation
+    # Kill any running ffmpeg process
+    pkill -P $$ ffmpeg 2>/dev/null
+    exit 1
+}
+
+Show_Thinking_Animation() {
+    local message="$1"
+    local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+    local i=0
+    (
+        while :; do
+            printf "\r%s %s" "${spinner[i++ % ${#spinner[@]}]}" "$message"
+            sleep 0.1
+            # Stop animation when the parent process finishes
+            kill -0 "$PPID" 2>/dev/null || break
+        done
+    ) &
+    animation_pid=$!
+}
+
+Stop_Thinking_Animation() {
+    if [ "$animation_pid" -ne 0 ]; then
+        kill "$animation_pid" 2>/dev/null
+        wait "$animation_pid" 2>/dev/null
+        animation_pid=0
+        # Clear the animation line
+        printf "\r\033[K"
+    fi
+}
+
+# ========================================================
+# logic
+# ========================================================
+
+# Set up signal handlers
+trap handle_interrupt INT TERM
+
+# check no args
+if [ $# -ne 0 ]; then
+    echo "This command requires no arguments."
+    exit 1
+fi
+
+# process all files in current directory
+for filename_full in *; do
+    # Skip directories
+    if [[ -d "$filename_full" ]]; then
+        continue
+    fi
+
+    # skip .opus files (already converted)
+    if [[ "$filename_full" == *.opus ]]; then
+        echo "Skipping already converted file: $filename_full"
+        ((skipped_count++))
+        continue
+    fi
+
+    # skip the script itself
+    if [[ "$filename_full" == "$0" ]]; then
+        continue
+    fi
+
+    # extract filename_clean
+    if [[ "$filename_full" == *.* ]]; then
+        filename_clean="${filename_full%.*}"
+    else
+        filename_clean="$filename_full"
+    fi
+
+    # check if output file already exists
+    if [[ -f "$filename_clean.opus" ]]; then
+        echo "Skipping '$filename_full': output '$filename_clean.opus' already exists"
+        ((skipped_count++))
+        continue
+    fi
+
+    # convert
+    Show_Thinking_Animation "Converting: $filename_full.."
+    if ffmpeg -i "$filename_full" -c:v copy -c:a libopus -b:a 32k "$filename_clean.opus" 2>/dev/null; then
+        Stop_Thinking_Animation
+        echo "✓ Successfully converted: $filename_full"
+        ((converted_count++))
+    else
+        Stop_Thinking_Animation
+        echo "✗ Failed to convert: $filename_full (may not be a media file)"
+        ((failed_count++))
+    fi
+done
+
+# summary
+echo "=========================================="
+echo "Conversion complete!"
+echo "✓ Files converted: $converted_count"
+echo "○ Files skipped: $skipped_count"
+echo "✗ Conversion failed: $failed_count"

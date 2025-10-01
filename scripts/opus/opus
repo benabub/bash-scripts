@@ -13,7 +13,6 @@
 # ========================================================
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <filename>"
     echo "This command requires exactly one argument."
     exit 1
 fi
