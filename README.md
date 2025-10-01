@@ -33,7 +33,7 @@ Locate a line similar to this:
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 ```
 
-Add a separate line for each script's dir (or one if you put several scripts together) above it:
+Add a separate line for each script's dir (or one if you put several scripts together) under it:
 
 ```bash
 export PATH=/path/to/directory/with/script[s]:$PATH
