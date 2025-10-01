@@ -2,9 +2,13 @@
 
 Custom commands (scripts) for POSIX-compliant shells (e.g., Bash, Zsh; not for fish).
 
-## List of Scripts
+## List of Scripts (alphabetical order)
 
+- [opus](./scripts/opus/README.md) - Single File Media to Opus Converter.
+- [opusall](./scripts/opusall/README.md) - All cwd Media Files to Opus Converter.
 - [rname](./scripts/rname/README.md) - Rename file trees: replace spaces with a separator and convert filenames to lowercase.
+- [videocut](./scripts/videocut/README.md) - Cut off unwanted segments from a video file based on timecodes (no re-encoding).
+- [videoplus](./scripts/videoplus/README.md) - Concatenate multiple video files into a single output file (no re-encoding).
 
 ## Installation
 

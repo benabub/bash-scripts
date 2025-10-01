@@ -37,10 +37,15 @@ This script provides a flexible way to rename files and directories in a directo
 | `DirName`           | `dir_name`              |  
 | `-another example_` | `another_example`       |  
 
+
+## Installation
+
+See `Installation` in Repo's [README](./../../README.md).
+
 ## Usage
 
 ```bash
-rname [--dryrun | -n] [OPTION] [DIRS...]
+./rname [--dryrun | -n] [OPTION] [DIRS...]
 ```
 
 ### Options
@@ -104,4 +109,4 @@ rname [--dryrun | -n] [OPTION] [DIRS...]
 
 ## License 📄
 
-MIT License - Free for personal and commercial use
+MIT

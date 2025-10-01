@@ -4,7 +4,7 @@
 # FUNCTIONAL OVERVIEW
 # ========================================================
 
-# This script converts media files to OPUS format while
+# This script converts one media file to OPUS format while
 # preserving video streams and converting audio to 32k Opus.
 #
 # INPUT: Single media file (any format supported by ffmpeg)
