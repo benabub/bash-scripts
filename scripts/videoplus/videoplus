@@ -5,6 +5,12 @@ set -euo pipefail
 # FUNCTIONAL OVERVIEW
 # ========================================================
 
+# Concatenates multiple video files losslessly without re-encoding
+# Supports MP4, MOV, MKV, AVI, WMV, FLV, WebM
+# Output: video_output[_index].[original-extension]
+#
+# Requirement: ffmpeg must be installed.
+
 # ========================================================
 # FUNCTIONS
 # ========================================================
@@ -58,6 +64,13 @@ else
 fi
 
 output_video_file="video_output$extension"
+
+# Check if file exists and increment index if needed
+index=1
+while [ -f "$output_video_file" ]; do
+    output_video_file="video_output_${index}${extension}"
+    ((index++))
+done
 
 # ------------------------------------------
 # temp file for ffmpeg -f concat command

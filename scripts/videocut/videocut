@@ -6,11 +6,20 @@ set -euo pipefail
 # ========================================================
 
 # This script removes unwanted video segments based on provided timecodes.
-# It offers key advantages over GUI editors like Kdenlive:
-# - Lossless processing – Unlike Kdenlive, which requires re-encoding,
+# It offers a hybrid approach compared to traditional video editors:
+#
+# ADVANTAGES:
+# - Lossless processing - Unlike editors that require full re-encoding,
 #   this script performs lossless cutting (supports MP4, MOV, MKV, AVI, WMV, FLV, WebM).
-#   No-rendering ensures output files are always smaller plus fast processing.
+#   No re-encoding preserves original quality and typically results in smaller output files.
+# - Faster than full re-encoding - Processing time depends on number of cuts rather than video duration.
 # - Format flexibility: Works natively with your source format without conversion.
+#
+# LIMITATIONS:
+# - Potential visual artifacts at cut points - Since the script doesn't re-encode or re-create keyframes,
+#   you may experience brief freezes or glitches at segment boundaries while the video stream 
+#   catches up to the next keyframe. Audio transitions remain seamless.
+# - Performance decreases with many segments - Each cut requires separate processing operations.
 #
 # Timecode Specifications:
 # - Plaintext file (with/without extension).
@@ -20,6 +29,17 @@ set -euo pipefail
 # - Use `None` | `none` | `False` | `false` when cutting from start/to end.
 #
 # Requirement: ffmpeg must be installed.
+
+# ========================================================
+# VARS
+# ========================================================
+
+input_video_file=$1
+time_codes=$2
+list_file="listemalissimo.txt"
+part_1_file="particulipto_one.mp4"
+part_2_file="particulipto_two.mp4"
+temp_result="temp_result.mp4"
 
 # ========================================================
 # FUNCTIONS
@@ -37,7 +57,7 @@ Check_Extension() {
 }
 
 cleanup() {
-    rm -f particulipto_*.mp4 listemalissimo.txt 2>/dev/null
+    rm -f "$list_file" "$part_1_file" "$part_2_file" "$temp_result" 2>/dev/null
 }
 
 # ffmpeg check
@@ -74,12 +94,32 @@ fix_time_format() {
 	fi
 }
 
+check_filename() {
+    local base_name="$1"
+    local extension=""
+    local index=1
+    local final_name="$base_name"
+
+    if Check_Extension "$base_name"; then
+        extension=".${base_name##*.}"
+        base_name="${base_name%.*}"
+    fi
+
+    while [ -f "$final_name" ]; do
+        final_name="${base_name}_${index}${extension}"
+        ((index++))
+    done
+
+    echo "$final_name"
+}
+
 # ========================================================
-# SCRIPT
+# LOGIC
 # ========================================================
 
-input_video_file=$1
-time_codes=$2
+# ------------------------------------------
+# initial tests
+# ------------------------------------------
 
 if [ ! -f "$input_video_file" ]; then
     echo "Error: Input video file not found: $input_video_file"
@@ -97,6 +137,15 @@ if ! command -v ffmpeg &> /dev/null; then
 fi
 
 # ------------------------------------------
+# all temp files names checking
+# ------------------------------------------
+
+list_file=$(check_filename "$list_file")
+part_1_file=$(check_filename "$part_1_file")
+part_2_file=$(check_filename "$part_2_file")
+temp_result=$(check_filename "$temp_result")
+
+# ------------------------------------------
 # forming output file name
 # ------------------------------------------
 
@@ -106,12 +155,13 @@ else
 	extension=""
 fi
 
-# if [ -z "$3" ]; then
 if [ -z "${3:-}" ]; then
-	output_video_file="video_output$extension"
+	base_name="video_output"
 else
-	output_video_file="$3$extension"
+	base_name="$3"
 fi
+
+output_video_file=$(check_filename "${base_name}${extension}")
 
 # ------------------------------------------
 # creating output file
@@ -123,7 +173,7 @@ cp -f "$input_video_file" "$output_video_file" || ( echo "Error: cannot copy $in
 # temp file for ffmpeg -f concat command
 # ------------------------------------------
 
-printf "file '%s'\n" "particulipto_1.mp4" "particulipto_2.mp4" > listemalissimo.txt
+printf "file '%s'\n" "$part_1_file" "$part_2_file" > "$list_file"
 
 # ------------------------------------------
 # cleanup temps
@@ -147,16 +197,16 @@ tac "$time_codes" | while read -r line; do
 	end_time=$(fix_time_format "$end_time")
 
 	if [[ "$start_time" == "None" || "$start_time" == "none" || "$start_time" == "False" || "$start_time" == "false" ]]; then
-		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy temp_file.mp4
-		mv temp_file.mp4 "$output_video_file"
+		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy "$temp_result"
+		mv "$temp_result" "$output_video_file"
 
 	elif [[ "$end_time" == "None" || "$end_time" == "none" || "$end_time" == "False" || "$end_time" == "false" ]]; then
-		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy temp_file.mp4
-		mv temp_file.mp4 "$output_video_file"
+		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy "$temp_result"
+		mv "$temp_result" "$output_video_file"
 	else
-		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy particulipto_1.mp4
-		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy particulipto_2.mp4
-		run_ffmpeg -f concat -safe 0 -i listemalissimo.txt -c copy temp_file.mp4
-		mv temp_file.mp4 "$output_video_file"
+		run_ffmpeg -i "$output_video_file" -to "$start_time" -c copy "$part_1_file"
+		run_ffmpeg -i "$output_video_file" -ss "$end_time" -c copy "$part_2_file"
+		run_ffmpeg -f concat -safe 0 -i "$list_file" -c copy "$temp_result"
+		mv "$temp_result" "$output_video_file"
 	fi
 done
