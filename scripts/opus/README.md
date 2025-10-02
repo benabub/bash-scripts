@@ -2,12 +2,12 @@
 
 Single File Media to Opus Converter.
 
-This script converts a single media file to the OPUS audio format, preserving any video streams and converting audio to 32kbps Opus. It is useful for converting individual files with minimal interaction.
+This script converts a single media file to the OPUS audio format, removing any video streams and converting audio to 32kbps Opus.
 
 ## Features
 
 - Converts a single media file to `.opus` format
-- Preserves video streams, converts audio to 32kbps Opus
+- Removes video streams, converts audio to 32kbps Opus
 - Prevents overwriting existing `.opus` files
 - Simple usage with clear error messages
 

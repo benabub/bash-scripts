@@ -2,12 +2,12 @@
 
 All cwd Media Files to Opus Converter.
 
-This script batch-converts all media files in the current directory to the OPUS audio format, preserving video streams and converting audio to 32kbps Opus.
+This script batch-converts all media files in the current directory to the OPUS audio format, removing video streams and converting audio to 32kbps Opus.
 
 ## Features
 
 - Converts all media files in the current directory (except `.opus` files and script itself if you prefer direct use)
-- Preserves video streams, converts audio to 32kbps Opus
+- Removes video streams, converts audio to 32kbps Opus
 - Skips files that are already converted or have existing `.opus` outputs
 - Provides a summary of converted, skipped, and failed files
 
