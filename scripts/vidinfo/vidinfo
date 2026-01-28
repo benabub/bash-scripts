@@ -1,0 +1,25 @@
+#!/bin/bash
+
+
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <video_file>"
+    exit 1
+fi
+
+ffprobe -v error -select_streams v:0 \
+    -show_entries stream=codec_name,width,height,r_frame_rate,bit_rate \
+    -show_entries format=bit_rate \
+    -of default=noprint_wrappers=1 \
+    "$1" | awk -F= '
+BEGIN {codec=res=fps=br_v=br_f=""}
+$1=="codec_name" {codec=$2}
+$1=="width" {w=$2}
+$1=="height" {h=$2; res=w"×"h; ratio=w/h; 
+              if(ratio>1.77) ar="16:9"; 
+              else if(ratio>1.33) ar="4:3"; 
+              else ar=w":"h}
+$1=="r_frame_rate" {split($2,a,"/"); fps=a[1]}
+$1=="bit_rate" && br_v=="" {br_v=$2; br_kbps=int($2/1000)}
+$1=="bit_rate" && br_v!="" {br_f=$2}
+END {printf "%s, %s, %s, %s fps, %d kbps\n", codec, res, ar, fps, br_kbps}'
