@@ -8,6 +8,19 @@ files=(*.mp4)
 
 if [ ${#files[@]} -eq 0 ]; then
     echo "No more mp4 files in the directory"
+	exit 1
 else
-    mv "${files[0]}" 0.mp4
+    for file in "${files[@]}"; do
+        if [[ "$file" =~ ^[1-9]\.mp4$ ]]; then
+            continue
+        fi
+        mv "$file" 0.mp4
+        break
+    done
+    
+    if [ ! -f "0.mp4" ]; then
+        echo "No suitable mp4 files found"
+		exit 1
+    fi
 fi
+
