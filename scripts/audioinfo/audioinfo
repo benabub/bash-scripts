@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+# Extracts audio stream metadata using MediaInfo.
+# Formats output for forum requirements:
+# [codec], [bitrate]kbps, [channels]ch
+# ========================================================
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <video_file>"
+    exit 1
+fi
+
+codec=$(mediainfo --Inform="Audio;%Format%" "$1" | tr '[:upper:]' '[:lower:]')
+bitrate=$(mediainfo --Inform="Audio;%BitRate%" "$1")
+channels=$(mediainfo --Inform="Audio;%Channels%" "$1")
+
+echo | awk -v c="$codec" -v b="$bitrate" -v ch="$channels" '{printf "%s, %.0fkbps, %sch\n", c, b/1000, ch}'
