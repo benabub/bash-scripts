@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+# Iterates through first-level subdirectories and renames
+# files matching the extension by replacing '_' with '|'.
+
+# Useful for restoring UNIX filenames after barbaric NTFS renaming.
+# ========================================================
+
+if [ $# -ne 1 ]; then
+    echo "This command requires exactly one argument: filename suffix - pattern for match."
+    exit 1
+fi
+
+EXT="$1"
+
+for dir in */; do
+    for file in "$dir"*."$EXT"; do
+        if [ -f "$file" ]; then
+	    new_name="${file//_/|}"
+            mv "$file" "$new_name"
+        fi
+    done
+done
