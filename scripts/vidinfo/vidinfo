@@ -1,6 +1,12 @@
 #!/bin/bash
 
-
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+# Extracts video stream metadata using ffprobe.
+# Outputs: codec, resolution, aspect ratio, fps, and bitrate.
+# Optimized for quick media technical specs overview.
+# ========================================================
 
 if [ $# -eq 0 ]; then
     echo "Usage: $0 <video_file>"
