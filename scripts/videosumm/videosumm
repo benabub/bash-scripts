@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# ========================================================
+# FUNCTIONAL OVERVIEW
+# ========================================================
+# Calculates the total duration of all mp4 files found 
+# within subdirectories of the current working directory.
+# Skips files in the root CWD.
+# Outputs format: Xh YYm
+# ========================================================
+
+raw_seconds=$(find . -mindepth 2 -name "*.mp4" -exec ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {} \;)
+
+total_seconds=$(echo "$raw_seconds" | awk '{s+=$1} END {print int(s)}')
+
+hours=$((total_seconds / 3600))
+minutes=$(( (total_seconds % 3600) / 60 ))
+
+printf "%dh %02dm\n" $hours $minutes
